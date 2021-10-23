@@ -35,6 +35,8 @@ typedef struct packed {
     logic [6:0] funct7;
 
     logic [31:0] pc;
+    
+    logic write_en;
 } rv32i_control_word;
 
 typedef struct packed {
