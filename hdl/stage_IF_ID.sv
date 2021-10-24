@@ -1,0 +1,62 @@
+import rv32i_types::*;
+
+module IF_ID(
+    input clk,
+    input rst,
+    input load,
+    
+    input [31:0] ir_in,
+    input [31:0] pc_in,
+
+    output [2:0] funct3,
+    output [6:0] funct7,
+    output rv32i_opcode opcode,
+    output [31:0] i_imm,
+    output [31:0] s_imm,
+    output [31:0] b_imm,
+    output [31:0] u_imm,
+    output [31:0] j_imm,
+    output [4:0] rs1,
+    output [4:0] rs2,
+    output [4:0] rd,
+    output [31:0] pc_out
+);
+
+logic [31:0] ir_data;
+logic [31:0] pc_data;
+
+assign funct3 = ir_data[14:12];
+assign funct7 = ir_data[31:25];
+assign opcode = rv32i_opcode'(ir_data[6:0]);
+assign i_imm = {{21{ir_data[31]}}, ir_data[30:20]};
+assign s_imm = {{21{ir_data[31]}}, ir_data[30:25], ir_data[11:7]};
+assign b_imm = {{20{ir_data[31]}}, ir_data[7], ir_data[30:25], ir_data[11:8], 1'b0};
+assign u_imm = {ir_data[31:12], 12'h000};
+assign j_imm = {{12{ir_data[31]}}, ir_data[19:12], ir_data[20], ir_data[30:21], 1'b0};
+assign rs1 = ir_data[19:15];
+assign rs2 = ir_data[24:20];
+assign rd = ir_data[11:7];
+
+assign pc_out = pc_data;
+
+always_ff @(posedge clk)
+begin
+    if (rst)
+    begin
+        ir_data <= '0;
+        pc_data <= '0;
+    end
+    else if (load == 1)
+    begin
+        ir_data <= ir_in;
+        pc_data <= pc_in;
+    end
+    else
+    begin
+        ir_data <= ir_data;
+        pc_data <= pc_data;
+    end
+end
+
+
+endmodule

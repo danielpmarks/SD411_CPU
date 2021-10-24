@@ -4,47 +4,52 @@ module ID_EX(
     input clk,
     input rst,
     input load,
-    
-    input [31:0] rs1_in,
-    input [31:0] rs2_in,
-    output [31:0] rs1_out,
-    output [31:0] rs2_out,
-
-    input packed_imm imm_in,
-    output packed_imm imm_out,
 
     input rv32i_control_word control_word_in,
     output rv32i_control_word control_word_out,
-    
-    output alumux::alumux1_sel_t alumux1_sel,
-    output alumux::alumux2_sel_t alumux2_sel,
-    output cmpmux::cmpmux_sel_t cmpmux_sel,
-    output marmux::marmux_sel_t marmux_sel,
-    output alu_ops aluop
 
-    output [31:0] pc_out
+    input logic [31:0] rs2_in,
+    input logic [31:0] alu_in,
+    input logic [31:0] mar_in,
+    input logic br_en_in,
+    input packed_imm imm_in,
+
+    output logic mem_read,
+    output logic mem_write,
+    output logic [1:0] mem_byte_enable,
+    output logic [31:0] mem_wdata,
+    output logic [31:0] alu_out,
+    output logic [31:0] mar_out,
+    output logic br_en_out,
+     
+    output logic imm_out
 );
 
-logic [31:0] rs1, rs2;
-packed_imm imm;
 rv32i_control_word control_word;
+logic [31:0] rs2, alu, mar;
+logic br_en;
+packed_imm imm;
 
-assign imm_out = imm;
-assign rs1_out = rs1;
-assign rs2_out = rs2;
 assign control_word_out = control_word;
+assign mem_wdata = rs2;
+assign alu_out = alu;
+assign mar_out = mar;
+assign br_en_out = br_en;
+assign imm_out = imm;
 
-assign alumux1_sel = control_word.alumux1_sel;
-assign alumux2_sel = control_word.alumux2_sel;
-assign cmpmux_sel = control_word.cmpmux_sel;
-assign marmux_sel = control_word.marmux_sel;
-assign aluop = control_word.aluop;
-assign pc_out = control_word.pc;
+assign mem_read = control_word.mem_read;
+assign mem_write = control_word.mem_write;
+assign mem_byte_enable = control_word.mem_byte_enable;
 
-always_ff(@posedge clk) begin
-    if(rst) begin
-        rs1 <= 32'b0;
-        rs2 <= 32'b0;
+always_ff @(posedge clk)
+begin
+    if (rst)
+    begin
+        rs2 <= 0;
+        alu <= 0;
+        mar <= 0;
+        br_en <= 0;
+
         imm.i_imm <= 32'b0;
         imm.s_imm <= 32'b0;
         imm.b_imm <= 32'b0;
@@ -69,19 +74,24 @@ always_ff(@posedge clk) begin
         control_word.funct7 <= 0;
         control_word.pc <= 0;
     end
-    else if(load) begin
-        rs1 <= rs1_in;
-        rs2 <= rs2_in;
-        imm <= imm_in;
+    else if (load == 1)
+    begin
         control_word <= control_word_in;
+        rs2 <= rs2_in;
+        alu <= alu_in;
+        mar <= mar_in;
+        br_en <= br_en_in;
+        imm <= imm_in;
     end
-    else begin 
-        rs1 <= rs1;
-        rs2 <= rs2;
-        imm <= imm;
+    else
+    begin
         control_word <= control_word;
+        rs2 <= rs2;
+        alu <= alu;
+        mar <= mar;
+        br_en <= br_en;
+        imm <= imm;
     end
 end
-
 
 endmodule
