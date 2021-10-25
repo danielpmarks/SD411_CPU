@@ -1,6 +1,6 @@
 import rv32i_types::*;
 
-module ID_EX(
+module EX_MEM(
     input clk,
     input rst,
     input load,
@@ -16,13 +16,12 @@ module ID_EX(
 
     output logic mem_read,
     output logic mem_write,
-    output logic [1:0] mem_byte_enable,
     output logic [31:0] mem_wdata,
     output logic [31:0] alu_out,
     output logic [31:0] mar_out,
     output logic br_en_out,
      
-    output logic imm_out
+    output packed_imm imm_out
 );
 
 rv32i_control_word control_word;
@@ -39,7 +38,7 @@ assign imm_out = imm;
 
 assign mem_read = control_word.mem_read;
 assign mem_write = control_word.mem_write;
-assign mem_byte_enable = control_word.mem_byte_enable;
+//assign mem_byte_enable = control_word.mem_byte_enable;
 
 always_ff @(posedge clk)
 begin
@@ -56,18 +55,16 @@ begin
         imm.u_imm <= 32'b0;
         imm.j_imm <= 32'b0;
 
-        control_word.opcode <= 0;
-        control_word.aluop <= 0;
+        control_word.opcode <= rv32i_opcode'(0);
+        control_word.aluop <= alu_ops'(0);
         control_word.mem_read <= 0;
         control_word.mem_write <= 0;
-        control_word.regfilemux_sel <= 0;
-        control_word.pcmux_sel <= 0;
-        control_word.alumux1_sel <= 0;
-        control_word.alumux2_sel <= 0;
-        control_word.cmpmux_sel <= 0;
-        control_word.rmask <= 0;
-        control_word.wmask <= 0;
-        control_word.mem_byte_enable <= 0;
+        control_word.regfilemux_sel <= regfilemux::regfilemux_sel_t'(0);
+        control_word.pcmux_sel <= pcmux::pcmux_sel_t'(0);
+        control_word.alumux1_sel <= alumux::alumux1_sel_t'(0);
+        control_word.alumux2_sel <= alumux::alumux2_sel_t'(0);
+        control_word.cmpmux_sel <= cmpmux::cmpmux_sel_t'(0);
+        //control_word.mem_byte_enable <= 0;
         control_word.mem_addr_bits <= 0;
         control_word.rd <= 0;
         control_word.funct3 <= 0;
