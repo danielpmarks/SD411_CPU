@@ -205,7 +205,7 @@ end
 /***************************** EX/MEM BUFFER ********************************/
 
 assign load_ex_mem = 1'b1;
-assign data_addr = alu_out;
+assign data_addr = {mar_out[31:2], 2'b00};
 
 EX_MEM stage_ex_mem(
     .*,
@@ -230,30 +230,32 @@ EX_MEM stage_ex_mem(
 
 always_comb begin
     data_mbe = 4'b1111;
-	 data_wdata = 32'd0;
-    unique case(control_words[2].opcode) 
-        sw: begin
-            data_wdata = mem_wdata;
-            data_mbe = 4'b1111;
-        end
-        sh: begin
-            unique case(mar_out[1])
-                1'b1: data_wdata = mem_wdata << 16;
-                1'b0: data_wdata = mem_wdata;
-            endcase
-            data_mbe = 4'b0011 << (mar_out[1] << 1);
-        end
-        sb: begin
-            unique case(mar_out[1:0])
-                2'b11: data_wdata = mem_wdata << 24;
-                2'b01: data_wdata = mem_wdata << 16;
-                2'b10: data_wdata = mem_wdata << 8;
-                2'b00: data_wdata = mem_wdata;
-            endcase
-            data_mbe = 4'b0001 << mar_out[1:0];
-        end
-        default: ;
-    endcase
+	data_wdata = 32'd0;
+    if(control_words[2].opcode == op_store) begin
+        unique case(store_funct3_t'(control_words[2].funct3)) 
+            sw: begin
+                data_wdata = mem_wdata;
+                data_mbe = 4'b1111;
+            end
+            sh: begin
+                unique case(mar_out[1])
+                    1'b1: data_wdata = mem_wdata << 16;
+                    1'b0: data_wdata = mem_wdata;
+                endcase
+                data_mbe = 4'b0011 << (mar_out[1] << 1);
+            end
+            sb: begin
+                unique case(mar_out[1:0])
+                    2'b11: data_wdata = mem_wdata << 24;
+                    2'b01: data_wdata = mem_wdata << 16;
+                    2'b10: data_wdata = mem_wdata << 8;
+                    2'b00: data_wdata = mem_wdata;
+                endcase
+                data_mbe = 4'b0001 << mar_out[1:0];
+            end
+            default: ;
+        endcase
+    end
 end
 
 /***************************** MEM/WB BUFFER ********************************/
