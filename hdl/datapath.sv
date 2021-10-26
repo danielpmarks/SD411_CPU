@@ -33,7 +33,10 @@ logic [31:0] pc_in, pc_out;
 /* IF/ID Signals */
 logic load_if_id;
 rv32i_opcode opcode;
-logic [4:0] rd;
+logic [2:0] funct3;
+logic [6:0] funct7;
+logic [4:0] rs1, rs2, rd;
+logic [31:0] pc_id;
 
 /* Decode Signals */
 logic [31:0] rs1_out, rs2_out;
@@ -43,7 +46,6 @@ logic load_id_ex;
 alumux::alumux1_sel_t alumux1_sel;
 alumux::alumux2_sel_t alumux2_sel;
 cmpmux::cmpmux_sel_t cmpmux_sel;
-marmux::marmux_sel_t marmux_sel;
 alu_ops aluop;
 branch_funct3_t cmpop;
 logic [31:0] pc_ex, rs1_ex, rs2_ex;
@@ -88,7 +90,7 @@ always_comb begin
         pc_in = alu_out;
     end
     else if(control_words[1].opcode == op_jalr) begin
-        pc_in = {alu_out[31:1], 2'b0};
+        pc_in = {alu_out[31:1], 1'b0};
     end
     else begin
         pc_in = pc_out + 4;
@@ -99,7 +101,7 @@ end
 /***************************** IF/ID BUFFER *****************************/
 
 assign load_if_id = 1'b1;
-logic ir_in;
+logic [31:0] ir_in;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
@@ -107,7 +109,7 @@ IF_ID stage_if_id(
     .rst(rst),
     .load(load_if_id),
     .ir_in(ir_in),
-    .pc_in(pc_in),
+    .pc_in(pc_out),
     .funct3 (funct3),
     .funct7 (funct7),
     .opcode (opcode),
@@ -121,7 +123,7 @@ IF_ID stage_if_id(
 /***************************** DECODE STAGE *****************************/
 
 
-    /***************** Control_rom *****************/
+    /********* Control_rom *********/
     control_rom control_rom(
         .clk (clk),
         .rst (rst),
@@ -161,7 +163,6 @@ ID_EX stage_id_ex(.*,
     .alumux1_sel(alumux1_sel),
     .alumux2_sel(alumux2_sel),
     .cmpmux_sel(cmpmux_sel),
-    .marmux_sel(marmux_sel),
     .aluop(aluop),
     .cmpop(cmpop),
     .pc_out(pc_ex));
@@ -204,7 +205,7 @@ end
 /***************************** EX/MEM BUFFER ********************************/
 
 assign load_ex_mem = 1'b1;
-
+assign data_addr = alu_out;
 
 EX_MEM stage_ex_mem(
     .*,

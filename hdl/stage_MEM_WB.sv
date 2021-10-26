@@ -32,12 +32,10 @@ assign load_regfile = control_word.load_regfile;
 assign regfilemux_sel = control_word.regfilemux_sel;
 assign pc = control_word.pc;
 
+assign alu_out = alu;
 assign mdr_out = mdr;
 assign br_en_out = br_en;
 assign u_imm = imm.u_imm;
-
-assign mem_read = control_word.mem_read;
-assign mem_write = control_word.mem_write;
 
 always_ff @(posedge clk)
 begin
@@ -63,7 +61,6 @@ begin
         control_word.alumux2_sel <= alumux::alumux2_sel_t'(0);
         control_word.cmpmux_sel <= cmpmux::cmpmux_sel_t'(0);
         //control_word.mem_byte_enable <= 0;
-        control_word.mem_addr_bits <= 0;
         control_word.rd <= 0;
         control_word.funct3 <= 0;
         control_word.funct7 <= 0;

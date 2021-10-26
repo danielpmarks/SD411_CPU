@@ -65,7 +65,6 @@ begin
         control_word.alumux2_sel <= alumux::alumux2_sel_t'(0);
         control_word.cmpmux_sel <= cmpmux::cmpmux_sel_t'(0);
         //control_word.mem_byte_enable <= 0;
-        control_word.mem_addr_bits <= 0;
         control_word.rd <= 0;
         control_word.funct3 <= 0;
         control_word.funct7 <= 0;
