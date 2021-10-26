@@ -78,22 +78,17 @@ typedef struct packed {
     alu_ops aluop;
     
     logic load_regfile;
-    logic load_mar;
-    logic load_mdr;
-	logic load_data_out;
 
     regfilemux::regfilemux_sel_t regfilemux_sel;
     pcmux::pcmux_sel_t pcmux_sel;
     alumux::alumux1_sel_t alumux1_sel;
     alumux::alumux2_sel_t alumux2_sel;
-    marmux::marmux_sel_t marmux_sel;
     cmpmux::cmpmux_sel_t cmpmux_sel;
 
     logic mem_read;
 	logic mem_write;
-    logic [1:0] mem_addr_bits;
 
-    logic [5:0] rd;
+    logic [4:0] rd;
     logic [2:0] funct3;
     logic [6:0] funct7;
 
