@@ -12,13 +12,6 @@ typedef logic [31:0] rv32i_word;
 typedef logic [4:0] rv32i_reg;
 typedef logic [3:0] rv32i_mem_wmask;
 
-typedef struct packed {
-    rv32i_opcode opcode;
-    alu_ops aluop;
-    logic regfilemux_sel;
-    logic load_regfile;
-    /* ... other signals ... */
-} rv32i_control_word;
 
 typedef enum bit [6:0] {
     op_lui   = 7'b0110111, //load upper immediate (U type)
@@ -77,6 +70,39 @@ typedef enum bit [2:0] {
     alu_or  = 3'b110,
     alu_and = 3'b111
 } alu_ops;
+
+
+//cp1
+typedef struct packed {
+    rv32i_opcode opcode;
+    alu_ops aluop;
+    
+    logic load_regfile;
+
+    regfilemux::regfilemux_sel_t regfilemux_sel;
+    pcmux::pcmux_sel_t pcmux_sel;
+    alumux::alumux1_sel_t alumux1_sel;
+    alumux::alumux2_sel_t alumux2_sel;
+    cmpmux::cmpmux_sel_t cmpmux_sel;
+
+    logic mem_read;
+	logic mem_write;
+
+    logic [4:0] rd;
+    logic [2:0] funct3;
+    logic [6:0] funct7;
+
+    logic [31:0] pc;
+} rv32i_control_word;
+
+//cp1
+typedef struct packed {
+    logic [31:0] i_imm;
+    logic [31:0] s_imm;
+    logic [31:0] b_imm;
+    logic [31:0] u_imm;
+    logic [31:0] j_imm;
+} packed_imm;
 
 
 endpackage : rv32i_types
