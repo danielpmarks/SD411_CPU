@@ -1,8 +1,8 @@
 module arbiter(
     input clk,
     input rst,
-    //data cache
 
+    //data cache
     input logic [31:0] pmem_address_c_d, // from llc
     input logic [255:0] pmem_wdata_c_d, // from llc
     input logic pmem_read_c_d, // from llc
@@ -11,12 +11,8 @@ module arbiter(
     output logic [255:0] pmem_rdata_c_d,// to llc
 
     //Instruction cache
-    
-
     input logic pmem_read_c_i,
-    input logic pmem_write_c_i,
     input logic [31:0] pmem_address_c_i, //from llc
-    input logic [255:0] pmem_wdata_c_i,//from llc
     output logic pmem_resp_c_i,//to llc
     output logic [255:0] pmem_rdata_c_i,//to llc
 
@@ -56,9 +52,8 @@ always_comb begin
                 pmem_write_m = pmem_write_c_d;
                 pmem_address_m = pmem_address_c_d;
                 pmem_wdata_m = pmem_wdata_c_d;
-            end else if (pmem_read_c_i || pmem_write_c_i) begin
+            end else if (pmem_read_c_i) begin
                 pmem_read_m = pmem_read_c_i;
-                pmem_write_m = pmem_write_c_i;
                 pmem_address_m = pmem_address_c_i;
                 pmem_wdata_m = pmem_wdata_c_i;
             end
@@ -88,16 +83,18 @@ always_comb begin : next_state_logic
 
 	case(state)
         idle: begin
-            if (pmem_read_c_i || pmem_write_c_i) begin
-                next_state = instruction_cache;
-            end else if (pmem_read_c_d || pmem_write_c_d) begin
+            if (pmem_read_c_d || pmem_write_c_d) begin
                 next_state = data_cache;
+            end else if (pmem_read_c_i) begin
+                next_state = instruction_cache;
             end
-
         end
 
         instruction_cache: begin
-            if (pmem_resp_m) begin
+            if (pmem_read_c_d || pmem_write_c_d) begin
+                next_state = data_cache;
+            end
+            else begin
                 next_state = idle;
             end
         end

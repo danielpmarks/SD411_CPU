@@ -46,9 +46,9 @@ module icache_control (
 
 enum int unsigned {
     /* List of states */
-	idle,
+	//idle,
     hit,
-    write_back,
+    //write_back,
     write_cache
 } state, next_states;
 
@@ -76,10 +76,10 @@ begin : state_actions
     /* Actions for each state */
 
     unique case (state) 
-        idle: begin
+        /*idle: begin
             //if (mem_read | mem_write) next_states = hit;
             //else next_states = idle;
-        end
+        end*/
 
         hit: begin
             //miss
@@ -88,11 +88,11 @@ begin : state_actions
                 set_lru = ~lru_output;
                 
                 
-                if (dirty_out[lru_output]) begin
+                /*if (dirty_out[lru_output]) begin
                     //mem_enable_sel = 1'b1;
                     set_dirty[lru_output] = 0;
                     load_dirty[lru_output] = 1;
-                end
+                end*/
             end
 
             //hit first way
@@ -106,7 +106,8 @@ begin : state_actions
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
-                else if (mem_write) begin
+
+                /*else if (mem_write) begin
                     mem_resp = 1'b1;
                     //set the first dirty
                     set_dirty = 2'b01;
@@ -115,7 +116,7 @@ begin : state_actions
                     write_enable_0 = mem_byte_enable256;
                     //set lru at the end of the write
                     load_lru = 1'b1;
-                end
+                end*/
             end
 
             //hit second way
@@ -129,7 +130,7 @@ begin : state_actions
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
-                else if (mem_write) begin
+                /*else if (mem_write) begin
                     mem_resp = 1'b1;
                     //set the second dirty
                     set_dirty = 2'b10;
@@ -140,14 +141,14 @@ begin : state_actions
 
                     //set lru at the end of the write
                     load_lru = 1'b1;
-                end
+                end*/
             end
         end
 
-        write_back: begin
+        /*write_back: begin
             pmem_write = 1'b1;
             //if (lru_output)
-        end
+        end*/
 
         write_cache: begin
             pmem_read = 1'b1;
@@ -183,10 +184,10 @@ begin : next_state_logic
      * for transitioning between states */
     next_states = state;
     unique case (state)
-        idle: begin
+        /*idle: begin
             if (mem_read | mem_write) next_states = hit;
             else next_states = idle;
-        end
+        end*/
 
         hit: begin
             if (hit_datapath == 0) begin
@@ -198,10 +199,10 @@ begin : next_state_logic
             end
         end
 
-        write_back: begin
+        /*write_back: begin
             if (pmem_resp) next_states = write_cache;
             else next_states = write_back;
-        end
+        end*/
 
         write_cache: begin
             if (pmem_resp) next_states = idle;

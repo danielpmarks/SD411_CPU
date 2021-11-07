@@ -1,7 +1,7 @@
 /* MODIFY. Your cache design. It contains the cache
 controller, cache datapath, and bus adapter. */
 
-module cache #(
+module dcache #(
     parameter s_offset = 5,
     parameter s_index  = 3,
     parameter s_tag    = 32 - s_offset - s_index,
@@ -35,9 +35,6 @@ module cache #(
     input logic pmem_resp
 	
 );
-
-
-
 
 logic [1:0] hit_datapath;
 

@@ -93,7 +93,7 @@ assign hit_datapath = {hit_1, hit_0};
 
 
 
-array #(.width(1))
+icache_array #(.width(1))
 lru (
     .clk(clk),
     .rst(rst),
@@ -105,7 +105,7 @@ lru (
     .dataout(lru_output)
 );
 
-array #(.width(1))
+icache_array #(.width(1))
 valid_array_0(
     .clk(clk),
     .rst(rst),
@@ -117,7 +117,7 @@ valid_array_0(
     .dataout(valid_out[0])
 );
 
-array #(.width(1))
+icache_array #(.width(1))
 valid_array_1(
     .clk(clk),
     .rst(rst),
@@ -129,7 +129,7 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-array #(.width(1))
+icache_array #(.width(1))
 dirty_array_0(
     .clk(clk),
     .rst(rst),
@@ -142,7 +142,7 @@ dirty_array_0(
 );
 
 
-array #(.width(1))
+icache_array #(.width(1))
 dirty_array_1(
     .clk(clk),
     .rst(rst),
@@ -154,7 +154,7 @@ dirty_array_1(
     .dataout(dirty_out[1])
 );
 
-array #(.width(24))
+icache_array #(.width(24))
 tag_array_0 (
     .clk(clk),
     .rst(rst),
@@ -166,7 +166,7 @@ tag_array_0 (
     .dataout(tag_output_0)
 );
 
-array  #(.width(24))
+icache_array  #(.width(24))
 tag_array_1 (
     .clk(clk),
     .rst(rst),
@@ -178,7 +178,7 @@ tag_array_1 (
     .dataout(tag_output_1)
 );
 
-data_array data_array_0 (
+icache_data_array data_array_0 (
     .clk(clk),
     .rst(rst),
     .read(1'b1),
@@ -189,7 +189,7 @@ data_array data_array_0 (
     .dataout(output_data_0)
 );
 
-data_array data_array_1 (
+icache_data_array data_array_1 (
     .clk(clk),
     .rst(rst),
     .read(1'b1),

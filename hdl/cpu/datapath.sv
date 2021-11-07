@@ -20,7 +20,6 @@ module datapath(
     output logic [31:0] data_wdata,
     input logic data_resp,
     input logic [31:0] data_rdata
-    
 );
 rv32i_control_word control_word_init;
 rv32i_control_word control_words[2:0];
