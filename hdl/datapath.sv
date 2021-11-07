@@ -42,6 +42,7 @@ logic [31:0] pc_id;
 logic [31:0] rs1_out, rs2_out;
 
 /* ID/EX Signals */
+logic [4:0] rs1_addr_ex, rs2_addr_ex;
 logic load_id_ex;
 alumux::alumux1_sel_t alumux1_sel;
 alumux::alumux2_sel_t alumux2_sel;
@@ -49,7 +50,8 @@ cmpmux::cmpmux_sel_t cmpmux_sel;
 alu_ops aluop;
 branch_funct3_t cmpop;
 logic [31:0] pc_ex, rs1_ex, rs2_ex;
-
+logic [31:0] forward_mux1_out;
+logic [31:0] forward_mux2_out;
 /* Execution Signals */
 logic [31:0] alumux1_out, alumux2_out, cmpmux_out;
 logic [31:0] alu_out;
@@ -131,10 +133,7 @@ IF_ID stage_if_id(
         .opcode (opcode),
         .funct3 (funct3),
         .funct7 (funct7),
-        .PC (pc_id),
-        .word (control_words[0])
-    );
-
+        .PC (pc_id),input logic [31:0] 
 regfile REGFILE(
     .*,
     .load(load_regfile),
@@ -146,6 +145,8 @@ regfile REGFILE(
     .reg_b(rs2_out)
 );
 
+
+
 /***************************** ID/EX BUFFER *******************************/
 
 assign load_id_ex = 1'b1;
@@ -156,8 +157,13 @@ ID_EX stage_id_ex(.*,
     .control_word_out(control_words[1]),
     .rs1_in(rs1_out),
     .rs2_in(rs2_out),
+    .rs1_addr_in(rs1),
+    .rs2_addr_in(rs2),
+    .rs1_addr_out(rs1_addr_ex),
+    .rs2_addr_out(rs2_addr_ex),
     .rs1_out(rs1_ex),
     .rs2_out(rs2_ex),
+
     .imm_in(immediates[0]),
     .imm_out(immediates[1]),
     .alumux1_sel(alumux1_sel),
@@ -171,13 +177,13 @@ ID_EX stage_id_ex(.*,
 /***************************** EXECUTION STAGE *****************************/
 
 alu ALU(.a(alumux1_out), .b(alumux2_out), .f(alu_out), .aluop(aluop));
-cmp CMP(.a(rs1_ex), .b(cmpmux_out), .cmpop(cmpop), .br_en(br_en));
+cmp CMP(.a(forward_mux1_out), .b(cmpmux_out), .cmpop(cmpop), .br_en(br_en));
 
 /* MUXES */
 always_comb begin
 	/* ALUMUX1 */
     unique case(alumux1_sel) 
-        alumux::rs1_out : alumux1_out = rs1_ex;
+        alumux::rs1_out : alumux1_out = forward_mux1_out;
         alumux::pc_out : alumux1_out = pc_ex;
         default: `BAD_MUX_SEL;
     endcase
@@ -189,13 +195,13 @@ always_comb begin
         alumux::b_imm : alumux2_out = immediates[1].b_imm;
         alumux::s_imm : alumux2_out = immediates[1].s_imm;
         alumux::j_imm : alumux2_out = immediates[1].j_imm;
-        alumux::rs2_out : alumux2_out = rs2_ex;
+        alumux::rs2_out : alumux2_out = forward_mux2_out;
         default: `BAD_MUX_SEL;
     endcase
 
 	 /* CMPMUX */
     unique case(cmpmux_sel) 
-        cmpmux::rs2_out : cmpmux_out = rs2_ex;
+        cmpmux::rs2_out : cmpmux_out = forward_mux2_out;
         cmpmux::i_imm : cmpmux_out = immediates[1].i_imm;
         default: `BAD_MUX_SEL;
     endcase
@@ -212,7 +218,7 @@ EX_MEM stage_ex_mem(
     .load(load_ex_mem),
     .control_word_in(control_words[1]),
     .control_word_out(control_words[2]),
-    .rs2_in(rs2_ex),
+    .rs2_in(forward_mux2_out),
     .alu_in(alu_out),
     .mar_in(alu_out),
     .br_en_in(br_en),
@@ -278,6 +284,24 @@ MEM_WB stage_mem_wb(
     .mdr_out(mdr_out_wb),
     .br_en_out(br_en_wb),
     .u_imm(u_imm_wb)
+);
+
+forwarding_unit forwarding_unit(
+    .MEM_WB_regfile_sel(control_words[2].regfilemux_sel),
+    .EX_MEM_regfile_sel(control_words[1].regfilemux_sel),
+    .MEM_WB_rd(control_words[2].rd),
+    .EX_MEM_rd(control_words[1].rd),
+    .rs1(rs1_ex), // reg addr from ID/EX stage
+    .rs2(rs2_ex), // reg addr from ID/EX stage
+    .rs1_out(rs1_addr_ex),
+    .rs2_out(rs2_addr_ex),
+    .EX_MEM_alu_out(alu_out_mem),
+    .EX_MEM_mem_out(data_rdata),
+    .MEM_WB_alu_out(alu_out_wb),
+    .MEM_WB_mem_out(mdr_out_wb),
+    .forward_mux1_out(forward_mux1_out),
+    .forward_mux2_out(forward_mux2_out)
+
 );
 
 always_comb begin
