@@ -3,7 +3,7 @@ A module to help your CPU (which likes to deal with 4 bytes
 at a time) talk to your cache (which likes to deal with 32
 bytes at a time).*/
 
-module bus_adapter
+module dcache_bus_adapter
 (
     output [255:0] mem_wdata256,
     input [255:0] mem_rdata256,

@@ -16,6 +16,8 @@ logic [3:0] mem_byte_enable;
 logic mem_read;
 logic mem_write;
 logic write_reg;
+logic trap;
+logic commit;
 regfilemux::regfilemux_sel_t regfilemux_sel;
 pcmux::pcmux_sel_t pcmux_sel;
 alumux::alumux1_sel_t alumux1_sel;
@@ -37,6 +39,8 @@ assign word.rd = rd;
 assign word.funct3 = funct3;
 assign word.pc = PC;
 assign word.funct7 = funct7;
+assign word.commit = commit;
+
 
 always_comb
 begin : word_generator
@@ -51,9 +55,14 @@ begin : word_generator
     cmpmux_sel = cmpmux::rs2_out;
     aluop = alu_ops'(funct3);
     load_regfile = 1'b0;
-
+    trap = 0;
+    commit = 1;
     case (opcode)
         op_br: begin
+            unique case(branch_funct3_t'(funct3))
+                beq, bne, blt, bge, bltu, bgeu:;
+                default: trap = 1;
+            endcase
             alumux1_sel = alumux::pc_out;
             alumux2_sel = alumux::b_imm;
             aluop = alu_add;
@@ -79,7 +88,7 @@ begin : word_generator
                 lb:begin
                     regfilemux_sel = regfilemux::lb;
                 end
-                default: ;
+                default: trap = 1;
             endcase
         end
 
@@ -87,11 +96,10 @@ begin : word_generator
             alumux2_sel = alumux::s_imm;
             aluop = alu_add;
             mem_write = 1;
-            /*case(store_funct3_t'(funct3))
-                sw: mem_byte_enable = 4'b1111;
-                sh: mem_byte_enable = 4'b0011;
-                sb: mem_byte_enable = 4'b0001;
-            endcase*/
+            unique case(store_funct3_t'(funct3))
+                sw, sh, sb:;
+                default: trap = 1;
+            endcase
         end
         
         op_imm: begin
@@ -177,7 +185,10 @@ begin : word_generator
 			regfilemux_sel = regfilemux::pc_plus4;
             aluop = alu_add;
         end
-        default: /*doom*/;
+        default: begin 
+            trap = 1;
+            commit = 0;
+        end
     endcase
 end
 

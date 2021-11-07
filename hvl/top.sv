@@ -24,18 +24,17 @@ bit f;
 /************************ Signals necessary for monitor **********************/
 // This section not required until CP2
 
-assign rvfi.commit = 0; // Set high when a valid instruction is modifying regfile or PC
-assign rvfi.halt = 0;   // Set high when you detect an infinite loop
+assign rvfi.commit = (dut.datapath.br_en & dut.datapath.load_pc) | dut.datapath.load_regfile; // Set high when a valid instruction is modifying regfile or PC
+assign rvfi.halt = dut.datapath.load_pc & (dut.datapath.pc_out == dut.datapath.pc_in);   // Set high when you detect an infinite loop
 initial rvfi.order = 0;
 always @(posedge itf.clk iff rvfi.commit) rvfi.order <= rvfi.order + 1; // Modify for OoO
 
-/*
-The following signals need to be set:
-Instruction and trap:
-    rvfi.inst
-    rvfi.trap
 
-Regfile:
+//Instruction and trap:
+assign rvfi.inst = dut.datapath.stage_if_id.ir_data;
+assign rvfi.trap = dut.datapath.control_rom.trap
+
+//Regfile:
     rvfi.rs1_addr
     rvfi.rs2_add
     rvfi.rs1_rdata
@@ -44,19 +43,17 @@ Regfile:
     rvfi.rd_addr
     rvfi.rd_wdata
 
-PC:
+//PC:
     rvfi.pc_rdata
     rvfi.pc_wdata
 
-Memory:
+//Memory:
     rvfi.mem_addr
     rvfi.mem_rmask
     rvfi.mem_wmask
     rvfi.mem_rdata
     rvfi.mem_wdata
 
-Please refer to rvfi_itf.sv for more information.
-*/
 
 /**************************** End RVFIMON signals ****************************/
 
@@ -112,21 +109,41 @@ mp4 dut (
     .clk(itf.clk),
     .rst(itf.rst),
 
-    .inst_read(itf.inst_read),
-    .inst_addr(itf.inst_addr),
+    .pmem_read(itf.mem_read),
+    .pmem_write(itf.mem_write),
 
-    .data_read(itf.data_read),
-    .data_write(itf.data_write),
-    .data_mbe(itf.data_mbe),
-    .data_wdata(itf.data_wdata),
-    .data_addr(itf.data_addr),
+    .pmem_rdata(itf.mem_rdata),
+    .pmem_wdata(itf.mem_wdata),
+    .pmem_address(itf.mem_addr),
+    
+    .pmem_resp(itf.mem_resp)
+);
 
-    // Signals from Cache/Arbiter/Memory
-    .inst_resp(itf.inst_resp),
-    .inst_rdata(itf.inst_rdata),
-
-    .data_resp(itf.data_resp),
-    .data_rdata(itf.data_rdata)
+riscv_formal_monitor_rv32imc monitor(
+  .clock(itf.clk),
+  .reset(itf.rst),
+  .rvfi_valid(rvfi.commit),
+  .rvfi_order(rvfi.order),
+  .rvfi_insn(dut.datapath.stage_if_id.ir_data),
+  .rvfi_trap(dut.datapath.control_rom.trap),
+  .rvfi_halt(rvfi.halt),
+  .rvfi_intr(1'b0),
+  .rvfi_mode(2'b00),
+  .rvfi_rs1_addr(dut.datapath.rs1),
+  .rvfi_rs2_addr(dut.datapath.rs2),
+  .rvfi_rs1_rdata(monitor.rvfi_rs1_addr ? dut.datapath.rs1_out : 0),
+  .rvfi_rs2_rdata(monitor.rvfi_rs2_addr ? dut.datapath.rs2_out : 0),
+  .rvfi_rd_addr(dut.load_regfile ? dut.datapath.rd_wb : 0),
+  .rvfi_rd_wdata(monitor.rvfi_rd_addr ? dut.datapath.regfilemux_out : 0),
+  .rvfi_pc_rdata(dut.datapath.pc_out),
+  .rvfi_pc_wdata(dut.datapath.pc_in),
+  .rvfi_mem_addr(dut.pmem_address),
+  .rvfi_mem_rmask(dut.datapath.rmask),
+  .rvfi_mem_wmask(dut.datapath.data_mbe),
+  .rvfi_mem_rdata(dut.pmem_rdata),
+  .rvfi_mem_wdata(dut.pmem_wdata),
+  .rvfi_mem_extamo(1'b0),
+  .errcode(itf.errcode)
 );
 /***************************** End Instantiation *****************************/
 

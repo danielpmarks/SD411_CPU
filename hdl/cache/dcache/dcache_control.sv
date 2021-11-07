@@ -1,7 +1,7 @@
 /* MODIFY. The cache controller. It is a state machine
 that controls the behavior of the cache. */
 
-module cache_control (
+module dcache_control (
     input logic mem_read,
     input logic mem_write,
 	input logic clk,

@@ -4,13 +4,14 @@ module ID_EX(
     input clk,
     input rst,
     input load,
+    input flush,
     
     input [31:0] rs1_in,
     input [31:0] rs2_in,
-    input [31:0] rs1_addr_in,
-    input [31:0] rs2_addr_in,
-    output [31:0] rs1_addr_out,
-    output [31:0] rs2_addr_out,
+    input [4:0] rs1_addr_in,
+    input [4:0] rs2_addr_in,
+    output [4:0] rs1_addr_out,
+    output [4:0] rs2_addr_out,
     output [31:0] rs1_out,
     output [31:0] rs2_out,
 
@@ -30,10 +31,11 @@ module ID_EX(
 );
 
 logic [31:0] rs1, rs2;
+logic [4:0] rs1_addr, rs2_addr;
 packed_imm imm;
 rv32i_control_word control_word;
-assign rs1_addr_out = rs1_addr_in;
-assign rs2_addr_out = rs2_addr_in;
+assign rs1_addr_out = rs1_addr;
+assign rs2_addr_out = rs2_addr;
 assign imm_out = imm;
 assign rs1_out = rs1;
 assign rs2_out = rs2;
@@ -50,11 +52,16 @@ always_ff@(posedge clk) begin
     if(rst) begin
         rs1 <= 32'd0;
         rs2 <= 32'd0;
+        rs1_addr <= 5'd0;
+        rs2_addr <= 5'd0;
+
         imm.i_imm <= 32'd0;
         imm.s_imm <= 32'd0;
         imm.b_imm <= 32'd0;
         imm.u_imm <= 32'd0;
         imm.j_imm <= 32'd0;
+
+
 
         control_word.opcode <= rv32i_opcode'(0);
         control_word.aluop <= alu_ops'(0);
@@ -71,15 +78,48 @@ always_ff@(posedge clk) begin
         control_word.funct7 <= 0;
         control_word.pc <= 0;
     end
+    else if (flush) begin
+        rs1 <= 32'd0;
+        rs2 <= 32'd0;
+        rs1_addr <= 5'd0;
+        rs2_addr <= 5'd0;
+
+        imm.i_imm <= 32'd0;
+        imm.s_imm <= 32'd0;
+        imm.b_imm <= 32'd0;
+        imm.u_imm <= 32'd0;
+        imm.j_imm <= 32'd0;
+        
+        control_word.opcode <= op_imm;
+        control_word.aluop <= op_add;
+        control_word.mem_read <= 0;
+        control_word.mem_write <= 0;
+        control_word.regfilemux_sel <= regfilemux::alu_out;
+        control_word.pcmux_sel <= pcmux::pc_plus4;
+        control_word.alumux1_sel <= alumux::rs1_out;
+        control_word.alumux2_sel <= alumux::rs2_out;
+        control_word.cmpmux_sel <= cmpmux::rs2_out;
+        control_word.load_regfile <= 0;
+        control_word.rd <= 0;
+        control_word.funct3 <= 0;
+        control_word.funct7 <= 0;
+        control_word.pc <= 0;
+    end
     else if(load) begin
         rs1 <= rs1_in;
         rs2 <= rs2_in;
+        rs1_addr <= rs1_addr_in;
+        rs2_addr <= rs2_addr_in;
+
         imm <= imm_in;
         control_word <= control_word_in;
     end
     else begin 
         rs1 <= rs1;
         rs2 <= rs2;
+        rs1_addr <= rs1_addr;
+        rs2_addr <= rs1_addr;
+
         imm <= imm;
         control_word <= control_word;
     end

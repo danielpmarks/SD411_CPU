@@ -14,15 +14,11 @@ module icache_data_array (
 logic [255:0] data [8] = '{default: '0};
 
 always_comb begin
-  
-    dataout = (load & (rindex == windex)) ? datain : data[rindex];
-  
+  dataout = (load & (rindex == windex)) ? datain : data[rindex];
 end
 
 always_ff @(posedge clk) begin
-    
-	data[windex] <= load ? datain : data[windex];
-    
+	data[windex] <= load ? datain : data[windex];  
 end
 
 endmodule : data_array
