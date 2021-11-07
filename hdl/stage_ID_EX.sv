@@ -7,6 +7,10 @@ module ID_EX(
     
     input [31:0] rs1_in,
     input [31:0] rs2_in,
+    input [31:0] rs1_addr_in,
+    input [31:0] rs2_addr_in,
+    output [31:0] rs1_addr_out,
+    output [31:0] rs2_addr_out,
     output [31:0] rs1_out,
     output [31:0] rs2_out,
 
@@ -28,7 +32,8 @@ module ID_EX(
 logic [31:0] rs1, rs2;
 packed_imm imm;
 rv32i_control_word control_word;
-
+assign rs1_addr_out = rs1_addr_in;
+assign rs2_addr_out = rs2_addr_in;
 assign imm_out = imm;
 assign rs1_out = rs1;
 assign rs2_out = rs2;
