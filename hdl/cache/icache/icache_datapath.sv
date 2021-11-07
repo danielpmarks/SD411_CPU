@@ -18,17 +18,17 @@ module icache_datapath #(
     input logic pmem_read,
     //input logic pmem_write,
     input logic mem_resp,	
-    input logic mem_enable_sel,
+    //input logic mem_enable_sel,
     output logic[1:0] hit_datapath,
-    //input logic [31:0] write_enable_0,
-    //input logic [31:0] write_enable_1,
+    input logic write_enable_0,
+    input logic write_enable_1,
     //lru input
     input logic set_lru,
     input logic load_lru,
 
     //dirty input
-    input logic[1:0] load_dirty, 
-    input logic[1:0] set_dirty, 
+    /*input logic[1:0] load_dirty, 
+    input logic[1:0] set_dirty, */
     
     //valid input
     input logic[1:0] load_valid, 
@@ -43,7 +43,7 @@ module icache_datapath #(
     //output to control
     output logic lru_output,
     output logic[1:0] valid_out,
-    output logic[1:0] dirty_out,
+    //output logic[1:0] dirty_out,
         
     /* Signals between cache and CPU */
     //input logic mem_write,
@@ -67,7 +67,7 @@ logic [2:0] input_index;
 logic [4:0] input_offset;
 logic hit_0, hit_1;
 //logic [1:0] hit;
-logic [255:0] data_array_in;
+//logic [255:0] data_array_in;
 logic [255:0] output_data_0;
 logic [255:0] output_data_1;
 logic [23:0] tag_output_0;
@@ -129,7 +129,7 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-icache_array #(.width(1))
+/*icache_array #(.width(1))
 dirty_array_0(
     .clk(clk),
     .rst(rst),
@@ -139,10 +139,10 @@ dirty_array_0(
     .windex(input_index),
     .datain(set_dirty[0]),
     .dataout(dirty_out[0])
-);
+);*/
 
 
-icache_array #(.width(1))
+/*icache_array #(.width(1))
 dirty_array_1(
     .clk(clk),
     .rst(rst),
@@ -153,7 +153,7 @@ dirty_array_1(
     .datain(set_dirty[1]),
     .dataout(dirty_out[1])
 );
-
+*/
 icache_array #(.width(24))
 tag_array_0 (
     .clk(clk),
@@ -181,22 +181,20 @@ tag_array_1 (
 icache_data_array data_array_0 (
     .clk(clk),
     .rst(rst),
-    .read(1'b1),
-    .write_en(write_enable_0),
+    .load(write_enable_0),
     .rindex(input_index),
     .windex(input_index),
-    .datain(data_array_in),
+    .datain(pmem_rdata),
     .dataout(output_data_0)
 );
 
 icache_data_array data_array_1 (
     .clk(clk),
     .rst(rst),
-    .read(1'b1),
-    .write_en(write_enable_1),
+    .load(write_enable_1),
     .rindex(input_index),
     .windex(input_index),
-    .datain(data_array_in),
+    .datain(pmem_rdata),
     .dataout(output_data_1)
 );
 
@@ -208,30 +206,27 @@ always_comb begin
         //miss
         2'b00: begin
             //check which is LRU
-            unique case(lru_output) 
+            /*unique case(lru_output) 
                 //first data
                 1'b0: begin
-                    pmem_wdata = output_data_0;
-                    /*case (mem_enable_sel)
+                    //pmem_wdata = output_data_0;
+                    case (mem_enable_sel)
                         1'b0: write_enable_0 = 32'd0;
                         1'b1: write_enable_0 = 32'hffffffff;
-                    endcase*/
+                    endcase
                 end
                 //second data
                 1'b1: begin
                     
-                    pmem_wdata = output_data_1;
-                    /*case (mem_enable_sel)
+                    //pmem_wdata = output_data_1;
+                    case (mem_enable_sel)
                         1'b0: write_enable_1 = 32'd0;
                         1'b1: write_enable_1 = 32'hffffffff;
                     endcase
-                end*/
-                /*default : begin
-                    pmem_wdata = 256'd0;
-                    write_enable_0 = 0;
-                    write_enable_1 = 0;*/
                 end
-            endcase
+                
+                end
+            endcase*/
             mem_rdata256 = pmem_rdata;
         end
 
@@ -284,21 +279,21 @@ always_comb begin
     
 
     //input to data array
-    unique case (mem_enable_sel)
+    /*unique case (mem_enable_sel)
 		1'b1 : data_array_in = pmem_rdata;
-		1'b0 : data_array_in = mem_wdata256;
-        default: data_array_in = mem_wdata256;
-	endcase
+		1'b0 : data_array_in = pmem_rdata;
+        default: data_array_in = pmem_rdata;
+	endcase*/
 
     //output to physical memory tag when write back
-    unique case ({pmem_write, pmem_read})
-		2'b10: begin
+    unique case ({/*pmem_write, */pmem_read})
+		/*2'b10: begin
 			case (lru_output)
 				1'b0: pmem_address = {tag_output_0, input_index, 5'h0};
 				1'b1: pmem_address = {tag_output_1, input_index, 5'h0};
 			endcase		
-		end
-		2'b01:	pmem_address = mem_address;
+		end*/
+		1'b1:	pmem_address = mem_address;
 		default: pmem_address = 32'h0;
 	endcase
 

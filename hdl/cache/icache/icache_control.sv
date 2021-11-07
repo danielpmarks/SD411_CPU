@@ -38,8 +38,8 @@ module icache_control (
     //output logic pmem_write,
     output logic mem_resp,	
     output logic mem_enable_sel,
-    //output logic [31:0] write_enable_0,
-    //output logic [31:0] write_enable_1,
+    output logic write_enable_0,
+    output logic write_enable_1,
     //input logic [31:0] mem_byte_enable256
     
 );
@@ -64,9 +64,9 @@ function void set_defaults();
     pmem_read = 0;
     //pmem_write = 0;
     mem_resp = 0;	
-    mem_enable_sel = 0;
-    //write_enable_0 = 0;
-    //write_enable_1 = 0;
+    //mem_enable_sel = 0;
+    write_enable_0 = 0;
+    write_enable_1 = 0;
 endfunction
 
 always_comb
@@ -101,8 +101,8 @@ begin : state_actions
                 set_lru = 1;
                 
                 if (mem_read) begin
-                    mem_enable_sel = 1'b0;
-                    write_enable_0 = 32'd0;
+                    //mem_enable_sel = 1'b0;
+                    write_enable_0 = 1'b0;
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
@@ -125,8 +125,8 @@ begin : state_actions
                 set_lru = 0;
                 
                 if (mem_read) begin
-                    mem_enable_sel = 1'b0;
-                    write_enable_1 = 32'd0;
+                    //mem_enable_sel = 1'b0;
+                    write_enable_1 = 1'b0;
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
@@ -152,21 +152,21 @@ begin : state_actions
 
         write_cache: begin
             pmem_read = 1'b1;
-            mem_enable_sel = 1'b1;
+            //mem_enable_sel = 1'b1;
             if (lru_output) begin
-                write_enable_1 = 32'hffffffff;
+                write_enable_1 = 1'b1;
             end
             else begin
-                write_enable_0 = 32'hffffffff;
+                write_enable_0 = 1'b1;
             end
             set_valid[lru_output] = 1'b1;
             load_valid[lru_output] = 1'b1;
             
-            pmem_write = 1'b0;
+            //pmem_write = 1'b0;
             if (pmem_resp) begin
                 //pmem_write = 1'b0;
                 //mem_resp = 1'b1;
-                mem_enable_sel = 1'b1;
+                //mem_enable_sel = 1'b1;
                 load_tag[lru_output] = 1'b1;
                 //set lru to the opposite way at the end of the write
                 //set_lru = ~lru_output
@@ -191,11 +191,12 @@ begin : next_state_logic
 
         hit: begin
             if (hit_datapath == 0) begin
-                if(dirty_out[lru_output]) next_states = write_back;
-                else next_states = write_cache;
+                /*if(dirty_out[lru_output]) next_states = write_back;
+                else*/ 
+                next_states = write_cache;
             end
             else begin
-                next_states = idle;
+                next_states = hit;
             end
         end
 
@@ -205,11 +206,11 @@ begin : next_state_logic
         end*/
 
         write_cache: begin
-            if (pmem_resp) next_states = idle;
+            if (pmem_resp) next_states = hit;
             else next_states = write_cache;
         end
 		
-        default: next_states = idle;
+        default: next_states = hit;
 	
 	endcase
 end
