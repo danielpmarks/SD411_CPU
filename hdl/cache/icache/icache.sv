@@ -47,8 +47,8 @@ logic set_lru;
 logic load_lru;
 
 //dirty input
-logic[1:0] load_dirty;
-logic[1:0] set_dirty;
+/*logic[1:0] load_dirty;
+logic[1:0] set_dirty;*/
     
 //valid input
 logic[1:0] load_valid;
@@ -63,7 +63,7 @@ logic data_array_select;
 //output to control
 logic lru_output;
 logic[1:0] valid_out;
-logic[1:0] dirty_out;
+//logic[1:0] dirty_out;
 //logic [31:0] write_enable_0;
 //logic [31:0] write_enable_1;
 //bus adapter
