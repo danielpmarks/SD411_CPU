@@ -24,63 +24,53 @@ bit f;
 /************************ Signals necessary for monitor **********************/
 // This section not required until CP2
 
-assign rvfi.commit = 0; // Set high when a valid instruction is modifying regfile or PC
-assign rvfi.halt = 0;   // Set high when you detect an infinite loop
+assign rvfi.commit = dut.datapath.monitors[3].commit; // Set high when a valid instruction is modifying regfile or PC
+assign rvfi.halt = dut.datapath.monitors[3].pc_wdata == dut.datapath.monitors[3].pc_rdata;   // Set high when you detect an infinite loop
 initial rvfi.order = 0;
 always @(posedge itf.clk iff rvfi.commit) rvfi.order <= rvfi.order + 1; // Modify for OoO
 
-/*
-The following signals need to be set:
-Instruction and trap:
-    rvfi.inst
-    rvfi.trap
 
-Regfile:
-    rvfi.rs1_addr
-    rvfi.rs2_add
-    rvfi.rs1_rdata
-    rvfi.rs2_rdata
-    rvfi.load_regfile
-    rvfi.rd_addr
-    rvfi.rd_wdata
+//Instruction and trap:
+assign rvfi.inst = dut.datapath.monitors[3].instruction;
+assign rvfi.trap = dut.datapath.monitors[3].trap;
 
-PC:
-    rvfi.pc_rdata
-    rvfi.pc_wdata
+//Regfile:
+assign rvfi.rs1_addr = dut.datapath.monitors[3].rs1_addr;
+assign rvfi.rs2_addr = dut.datapath.monitors[3].rs2_addr;
+assign rvfi.rs1_rdata = dut.datapath.monitors[3].rs1_rdata;
+assign rvfi.rs2_rdata = dut.datapath.monitors[3].rs2_rdata;
+assign rvfi.load_regfile = dut.datapath.load_regfile;
+assign rvfi.rd_addr = dut.datapath.monitors[3].rd_addr;
+assign rvfi.rd_wdata = dut.datapath.regfilemux_out;
 
-Memory:
-    rvfi.mem_addr
-    rvfi.mem_rmask
-    rvfi.mem_wmask
-    rvfi.mem_rdata
-    rvfi.mem_wdata
+//PC:
+assign rvfi.pc_rdata = dut.datapath.monitors[3].pc_rdata;
+assign rvfi.pc_wdata = dut.datapath.monitors[3].pc_wdata;
 
-Please refer to rvfi_itf.sv for more information.
-*/
+//Memory:
+assign rvfi.mem_addr = dut.datapath.monitors[3].mem_addr;
+assign rvfi.mem_rmask = dut.datapath.monitors[3].mem_rmask;
+assign rvfi.mem_wmask = dut.datapath.monitors[3].mem_wmask;
+assign rvfi.mem_rdata = dut.datapath.monitors[3].mem_rdata;
+assign rvfi.mem_wdata = dut.datapath.monitors[3].mem_wdata;
+
 
 /**************************** End RVFIMON signals ****************************/
 
 /********************* Assign Shadow Memory Signals Here *********************/
 // This section not required until CP2
-/*
-The following signals need to be set:
-icache signals:
-    itf.inst_read
-    itf.inst_addr
-    itf.inst_resp
-    itf.inst_rdata
+assign itf.inst_read = dut.instruction_cache.mem_read;
+assign itf.inst_addr = dut.instruction_cache.mem_address;
+assign itf.inst_resp = dut.instruction_cache.mem_resp;
+assign itf.inst_rdata = dut.instruction_cache.mem_rdata;
 
-dcache signals:
-    itf.data_read
-    itf.data_write
-    itf.data_mbe
-    itf.data_addr
-    itf.data_wdata
-    itf.data_resp
-    itf.data_rdata
-
-Please refer to tb_itf.sv for more information.
-*/
+assign itf.data_read = dut.data_cache.mem_read;
+assign itf.data_write = dut.data_cache.mem_write;
+assign itf.data_mbe = dut.data_cache.mem_byte_enable;
+assign itf.data_addr = dut.data_cache.mem_address;
+assign itf.data_wdata = dut.data_cache.mem_wdata;
+assign itf.data_resp = dut.data_cache.mem_resp;
+assign itf.data_rdata = dut.data_cache.mem_rdata;
 
 /*********************** End Shadow Memory Assignments ***********************/
 
@@ -88,46 +78,24 @@ Please refer to tb_itf.sv for more information.
 assign itf.registers = '{default: '0};
 
 /*********************** Instantiate your design here ************************/
-/*
-The following signals need to be connected to your top level:
-Clock and reset signals:
-    itf.clk
-    itf.rst
 
-Burst Memory Ports:
-    itf.mem_read
-    itf.mem_write
-    itf.mem_wdata
-    itf.mem_rdata
-    itf.mem_addr
-    itf.mem_resp
 
-Please refer to tb_itf.sv for more information.
-*/
-//riscv_formal_monitor_rv32imc
-assign itf.mem_read = 0;
-assign itf.mem_write = 0;
 
 mp4 dut (
     .clk(itf.clk),
     .rst(itf.rst),
 
-    .inst_read(itf.inst_read),
-    .inst_addr(itf.inst_addr),
+    .pmem_read(itf.mem_read),
+    .pmem_write(itf.mem_write),
 
-    .data_read(itf.data_read),
-    .data_write(itf.data_write),
-    .data_mbe(itf.data_mbe),
-    .data_wdata(itf.data_wdata),
-    .data_addr(itf.data_addr),
-
-    // Signals from Cache/Arbiter/Memory
-    .inst_resp(itf.inst_resp),
-    .inst_rdata(itf.inst_rdata),
-
-    .data_resp(itf.data_resp),
-    .data_rdata(itf.data_rdata)
+    .pmem_rdata(itf.mem_rdata),
+    .pmem_wdata(itf.mem_wdata),
+    .pmem_address(itf.mem_addr),
+    
+    .pmem_resp(itf.mem_resp)
 );
+
+
 /***************************** End Instantiation *****************************/
 
 endmodule

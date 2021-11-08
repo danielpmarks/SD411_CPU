@@ -3,17 +3,12 @@ that controls the behavior of the cache. */
 
 module icache_control (
     input logic mem_read,
-    //input logic mem_write,
 	input logic clk,
 	input logic pmem_resp,
+	
     //lru input
     output logic set_lru,
     output logic load_lru,
-
-    //dirty input
-
-    //output logic[1:0] load_dirty, 
-    //output logic[1:0] set_dirty, 
     
     //valid input
     output logic[1:0] load_valid, 
@@ -29,18 +24,14 @@ module icache_control (
     input logic lru_output,
     input logic[1:0] valid_out,
 
-    //input logic[1:0] dirty_out,
-
     input logic [1:0] hit_datapath,
 
 
     output logic pmem_read,
-    //output logic pmem_write,
     output logic mem_resp,	
-    output logic mem_enable_sel,
+    //output logic mem_enable_sel,
     output logic write_enable_0,
-    output logic write_enable_1,
-    //input logic [31:0] mem_byte_enable256
+    output logic write_enable_1
     
 );
 
@@ -221,4 +212,4 @@ begin: next_state_assignment
     state <= next_states;
 end
 
-endmodule : cache_control
+endmodule : icache_control

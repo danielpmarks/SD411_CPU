@@ -55,6 +55,7 @@ always_comb begin
             end else if (pmem_read_c_i) begin
                 pmem_read_m = pmem_read_c_i;
                 pmem_address_m = pmem_address_c_i;
+                pmem_wdata_m = pmem_wdata_c_i;
             end
         end
 

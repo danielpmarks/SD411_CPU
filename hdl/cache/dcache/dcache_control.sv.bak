@@ -216,4 +216,4 @@ begin: next_state_assignment
     state <= next_states;
 end
 
-endmodule : dcache_control
+endmodule : cache_control

@@ -1,6 +1,6 @@
 /* A register array to be used for tag arrays, LRU array, etc. */
 
-module array #(
+module dcache_array #(
     parameter s_index = 3,
     parameter width = 1
 )
@@ -30,6 +30,10 @@ logic [width-1:0] data [num_sets-1:0] /* synthesis ramstyle = "logic" */;
 logic [width-1:0] _dataout;
 assign dataout = _dataout;
 
+always_comb begin
+    _dataout = (load  & (rindex == windex)) ? datain : data[rindex];
+end
+
 always_ff @(posedge clk)
 begin
     if (rst) begin
@@ -37,12 +41,9 @@ begin
             data[i] <= '0;
     end
     else begin
-        if (read)
-            _dataout <= (load  & (rindex == windex)) ? datain : data[rindex];
-
         if(load)
             data[windex] <= datain;
     end
 end
 
-endmodule : array
+endmodule : dcache_array

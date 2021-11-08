@@ -46,4 +46,4 @@ begin
     end
 end
 
-endmodule : icache_array
+endmodule : array

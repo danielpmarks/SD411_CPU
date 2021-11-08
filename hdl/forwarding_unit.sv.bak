@@ -50,7 +50,7 @@ always_comb begin : cmp
 end
 
 always_comb begin : MEM_WB_true_mem_out_mux
-    MEM_WB_true_mem_out = {32{1'b0}};
+    MEM_WB_true_mem_out = {32{0}};
     unique case (MEM_WB_regfile_sel)
         regfilemux::lw: MEM_WB_true_mem_out = MEM_WB_mem_out;
         regfilemux::lb: begin 
@@ -85,13 +85,13 @@ always_comb begin : MEM_WB_true_mem_out_mux
                 default: ;
             endcase 
         end
-        default: MEM_WB_true_mem_out = {32{1'b0}};
+        default: MEM_WB_true_mem_out = {32{0}};
     endcase
 end
 
 always_comb begin : EX_MEM_true_mem_out_mux
-    EX_MEM_true_mem_out = {32{1'b0}};
-    unique case (EX_MEM_regfile_sel)
+    EX_MEM_true_mem_out = {32{0}};
+    unique case (regfilemux_sel)
         regfilemux::lw: EX_MEM_true_mem_out = EX_MEM_mem_out;
         regfilemux::lb: begin 
             unique case(EX_MEM_alu_out[1:0])
@@ -125,7 +125,7 @@ always_comb begin : EX_MEM_true_mem_out_mux
                 default: ;
             endcase 
         end
-        default: EX_MEM_true_mem_out = {32{1'b0}};
+        default: EX_MEM_true_mem_out = {32{0}};
     endcase
 end
 
@@ -142,18 +142,16 @@ always_comb begin : forward1_mux
                 regfilemux::lbu: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lb: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lw: forward_mux1_out = MEM_WB_true_mem_out;
-					 default:;
             endcase
         end
         2'b01: begin
-            case (EX_MEM_regfile_sel)
+            case (EXE_MEM_regfile_sel)
                 regfilemux::alu_out: forward_mux1_out = EX_MEM_alu_out;
                 regfilemux::lhu: forward_mux1_out = EX_MEM_true_mem_out;
                 regfilemux::lh: forward_mux1_out = EX_MEM_true_mem_out;
                 regfilemux::lbu: forward_mux1_out = EX_MEM_true_mem_out;
                 regfilemux::lb: forward_mux1_out = EX_MEM_true_mem_out;
                 regfilemux::lw: forward_mux1_out = EX_MEM_true_mem_out;
-					 default:;
             endcase
         end
         2'b00: forward_mux1_out = rs1_out;
@@ -173,18 +171,16 @@ always_comb begin : forward2_mux
                 regfilemux::lbu: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lb: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lw: forward_mux2_out = MEM_WB_true_mem_out;
-					 default:;
             endcase
         end
         2'b01: begin
-            case (EX_MEM_regfile_sel)
-                regfilemux::alu_out: forward_mux2_out = EX_MEM_alu_out;
-                regfilemux::lhu: forward_mux2_out = EX_MEM_true_mem_out;
-                regfilemux::lh: forward_mux2_out = EX_MEM_true_mem_out;
-                regfilemux::lbu: forward_mux2_out = EX_MEM_true_mem_out;
-                regfilemux::lb: forward_mux2_out = EX_MEM_true_mem_out;
-                regfilemux::lw: forward_mux2_out = EX_MEM_true_mem_out;
-					 default:;
+            case (EXE_MEM_regfile_sel)
+                regfilemux::alu_out: forward_mux2_out = EXE_MEM_alu_out;
+                regfilemux::lhu: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lh: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lbu: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lb: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lw: forward_mux2_out = EXE_MEM_true_mem_out;
             endcase
         end
         2'b00: forward_mux2_out = rs2_out;

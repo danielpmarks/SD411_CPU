@@ -4,6 +4,7 @@ module IF_ID(
     input clk,
     input rst,
     input load,
+    input flush,
     
     input [31:0] ir_in,
     input [31:0] pc_in,
@@ -16,12 +17,14 @@ module IF_ID(
     output logic [4:0] rs1,
     output logic [4:0] rs2,
     output logic [4:0] rd,
-    output logic [31:0] pc_out
+    output logic [31:0] pc_out,
+    output logic [31:0] ir_out
 );
 
 logic [31:0] ir_data;
 logic [31:0] pc_data;
 
+assign ir_out = ir_data;
 
 assign funct3 = ir_data[14:12];
 assign funct7 = ir_data[31:25];
@@ -42,6 +45,10 @@ begin
     if (rst)
     begin
         ir_data <= '0;
+        pc_data <= '0;
+    end
+    else if (flush == 1) begin
+        ir_data <= 32'h00000013;
         pc_data <= '0;
     end
     else if (load == 1)
