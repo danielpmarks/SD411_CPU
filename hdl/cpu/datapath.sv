@@ -25,12 +25,15 @@ rv32i_control_word control_word_init;
 rv32i_control_word control_words[2:0];
 packed_imm immediates[2:0];
 
+monitor_t monitors[3:0];
+
 logic stall;
 assign stall = !inst_resp || ((data_read || data_write) && !data_resp); 
 
 /* IF Signals */
 logic load_pc;
 logic [31:0] pc_in, pc_out;
+logic [31:0] ir_out;
 
 /* IF/ID Signals */
 logic load_if_id;
@@ -73,7 +76,6 @@ logic load_regfile;
 logic br_en_wb;
 logic [4:0] rd_wb;
 logic [31:0] pc_wb, alu_out_wb, mdr_out_wb, u_imm_wb;
-logic [3:0] rmask;
 regfilemux::regfilemux_sel_t regfilemux_sel;
 logic [31:0] regfilemux_out;
 
@@ -123,7 +125,8 @@ IF_ID stage_if_id(
     .rs1 (rs1),
     .rs2 (rs2),
     .rd (rd),
-    .pc_out (pc_id)
+    .pc_out (pc_id),
+    .ir_out(ir_out)
 );
 
 /***************************** DECODE STAGE *****************************/
@@ -138,7 +141,9 @@ IF_ID stage_if_id(
         .funct3 (funct3),
         .funct7 (funct7),
         .PC (pc_id),
-        .word(control_words[0])
+        .word(control_words[0]),
+        .instruction(ir_out),
+        .monitor(monitors[0])
     );
 
 regfile REGFILE(
@@ -179,7 +184,11 @@ ID_EX stage_id_ex(.*,
     .cmpmux_sel(cmpmux_sel),
     .aluop(aluop),
     .cmpop(cmpop),
-    .pc_out(pc_ex));
+    .pc_out(pc_ex),
+    
+    .monitor_in(monitors[0]),
+    .monitor_out(monitors[1])
+);
 
 
 /***************************** EXECUTION STAGE *****************************/
@@ -239,7 +248,9 @@ EX_MEM stage_ex_mem(
     .mar_out(mar_out),
     .br_en_out(br_en_mem),
 
-    .imm_out(immediates[2])
+    .imm_out(immediates[2]),
+    .monitor_in(monitors[1]),
+    .monitor_out(monitors[2])
 );
 
 always_comb begin
@@ -292,7 +303,10 @@ MEM_WB stage_mem_wb(
     .alu_out(alu_out_wb),
     .mdr_out(mdr_out_wb),
     .br_en_out(br_en_wb),
-    .u_imm(u_imm_wb)
+    .u_imm(u_imm_wb),
+
+    .monitor_in(monitors[2]),
+    .monitor_out(monitors[3])
 );
 
 forwarding_unit forwarding_unit(
@@ -314,7 +328,6 @@ forwarding_unit forwarding_unit(
 );
 
 always_comb begin
-    rmask = 4'b1111;
     /*assign mem_address = {not_zeroed_mem[31 : 2], 2'd0};
     assign mem_address_2bit = not_zeroed_mem[1:0];*/
     unique case (regfilemux_sel)
@@ -324,7 +337,6 @@ always_comb begin
         regfilemux::lw: regfilemux_out = mdr_out_wb;
         regfilemux::pc_plus4: regfilemux_out = pc_out + 4;
         regfilemux::lb: begin 
-            rmask = 4'b0001 << alu_out_wb[1:0];
             unique case(alu_out_wb[1:0])
                 2'b11: regfilemux_out = {{24{mdr_out_wb[31]}}, mdr_out_wb[31:24]};
                 2'b10: regfilemux_out = {{24{mdr_out_wb[23]}}, mdr_out_wb[23:16]};
@@ -334,7 +346,6 @@ always_comb begin
             endcase
         end
         regfilemux::lbu: begin 
-            rmask = 4'b0001 << alu_out_wb[1:0];
             unique case(alu_out_wb[1:0])
                 2'b11: regfilemux_out = {24'd0, mdr_out_wb[31:24]};
                 2'b10: regfilemux_out = {24'd0, mdr_out_wb[23:16]};
@@ -344,7 +355,6 @@ always_comb begin
            endcase
         end
         regfilemux::lh: begin 
-            rmask = 4'b0011 << {alu_out_wb[1], 1'b0};
             unique case(alu_out_wb[1])
                 1'b1: regfilemux_out = {{16{mdr_out_wb[31]}}, mdr_out_wb[31:16]};
                 1'b0: regfilemux_out = {{16{mdr_out_wb[15]}}, mdr_out_wb[15:0]}; 
@@ -352,7 +362,6 @@ always_comb begin
             endcase
         end
         regfilemux::lhu: begin 
-            rmask = 4'b0011 << {alu_out_wb[1], 1'b0};
             unique case(alu_out_wb[1])
                 1'b1: regfilemux_out = {16'd0, mdr_out_wb[31:16]};
                 1'b0: regfilemux_out = {16'd0, mdr_out_wb[15:0]};  

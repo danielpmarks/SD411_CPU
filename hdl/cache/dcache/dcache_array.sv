@@ -46,4 +46,4 @@ begin
     end
 end
 
-endmodule : array
+endmodule : dcache_array

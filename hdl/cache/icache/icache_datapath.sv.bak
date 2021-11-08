@@ -64,6 +64,7 @@ module icache_datapath #(
 //internal signal
 logic [23:0] input_tag;
 logic [2:0] input_index;
+logic [4:0] input_offset;
 logic hit_0, hit_1;
 //logic [1:0] hit;
 //logic [255:0] data_array_in;
@@ -77,10 +78,11 @@ logic [23:0] tag_output_1;
 //breaking down mem_address
 assign input_tag = mem_address[31:8];
 assign input_index = mem_address[7:5];
+assign input_offset = mem_address[4:0];
 
 //hit
-assign hit_0 = mem_read && valid_out[0] && (tag_output_0 == input_tag);
-assign hit_1 = mem_read && valid_out[1] && (tag_output_1 == input_tag);
+assign hit_0 = (mem_write | mem_read) & valid_out[0] ? ((tag_output_0 == input_tag) ? 1 : 0) : 0;
+assign hit_1 = (mem_write | mem_read) & valid_out[1] ? ((tag_output_1 == input_tag) ? 1 : 0) : 0;
 
 assign hit_datapath = {hit_1, hit_0};
 
@@ -178,6 +180,7 @@ tag_array_1 (
 
 icache_data_array data_array_0 (
     .clk(clk),
+    .rst(rst),
     .load(write_enable_0),
     .rindex(input_index),
     .windex(input_index),
@@ -187,6 +190,7 @@ icache_data_array data_array_0 (
 
 icache_data_array data_array_1 (
     .clk(clk),
+    .rst(rst),
     .load(write_enable_1),
     .rindex(input_index),
     .windex(input_index),
@@ -197,8 +201,6 @@ icache_data_array data_array_1 (
 
 
 always_comb begin
-	mem_rdata256 = 256'd0;
-	pmem_address = 32'd0;
     unique case (hit_datapath)
         
         //miss
@@ -267,7 +269,9 @@ always_comb begin
 
         
             
-        default: ;
+        /*default: begin
+            
+        end*/
         
 
     endcase
@@ -290,7 +294,7 @@ always_comb begin
 			endcase		
 		end*/
 		1'b1:	pmem_address = mem_address;
-		default: pmem_address = 32'd0;
+		default: pmem_address = 32'h0;
 	endcase
 
     
@@ -298,4 +302,4 @@ always_comb begin
         
     
 end
-endmodule : icache_datapath
+endmodule : cache_datapath

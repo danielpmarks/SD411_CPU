@@ -14,10 +14,10 @@ module mp4
 );
 
 /* I Cache Ports */     
-logic inst_read,
-logic [31:0] inst_addr,
-logic inst_resp,
-logic [31:0] inst_rdata,
+logic inst_read;
+logic [31:0] inst_addr;
+logic inst_resp;
+logic [31:0] inst_rdata;
 
 /* D Cache Ports */
 logic data_read, data_write, data_resp;
@@ -29,7 +29,7 @@ logic [255:0] pmem_wdata_c_d, pmem_rdata_c_d; // from llc
 logic pmem_read_c_d, pmem_write_c_d, pmem_resp_c_d; // to llc
 
 //Instruction cache
-logic pmem_read_c_i, pmem_resp_c_i;;
+logic pmem_read_c_i, pmem_resp_c_i;
 logic [31:0] pmem_address_c_i; //from llc
 logic [255:0] pmem_wdata_c_i, pmem_rdata_c_i;//from llc
 
@@ -69,7 +69,7 @@ dcache data_cache(
     .mem_rdata(data_rdata),
     .mem_wdata(data_wdata),
     .mem_resp(data_resp),
-    .mem_byte_enable(data_mbe)
+    .mem_byte_enable(data_mbe),
 
     .pmem_address(pmem_address_c_d),
     .pmem_read(pmem_read_c_d),

@@ -8,10 +8,12 @@ module control_rom(
     input logic [2:0] funct3,
     input logic [6:0] funct7,
     input logic [31:0] PC,
-    output rv32i_control_word word
+    output rv32i_control_word word,
+
+    input [31:0] instruction,
+    output monitor_t monitor
 
 );
-
 logic [3:0] mem_byte_enable;
 logic mem_read;
 logic mem_write;
@@ -41,10 +43,16 @@ assign word.pc = PC;
 assign word.funct7 = funct7;
 assign word.commit = commit;
 
-
 always_comb
 begin : word_generator
     
+    monitor.commit = 1;
+    monitor.pc_rdata = PC;
+    monitor.pc_wdata = PC + 4;
+    monitor.instruction = instruction;
+    monitor.trap = trap;
+
+
     mem_read = 1'b0;
 	mem_write = 1'b0;
     regfilemux_sel = regfilemux::alu_out;
