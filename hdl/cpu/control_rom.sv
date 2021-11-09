@@ -41,12 +41,11 @@ assign word.rd = rd;
 assign word.funct3 = funct3;
 assign word.pc = PC;
 assign word.funct7 = funct7;
-assign word.commit = commit;
 
 always_comb
 begin : word_generator
     
-    monitor.commit = 1;
+    monitor.commit = commit;
     monitor.pc_rdata = PC;
     monitor.pc_wdata = PC + 4;
     monitor.instruction = instruction;
@@ -64,7 +63,7 @@ begin : word_generator
     aluop = alu_ops'(funct3);
     load_regfile = 1'b0;
     trap = 0;
-    commit = 1;
+    commit = load_regfile || opcode == op_br || opcode == op_jal || opcode == op_jalr || opcode == op_auipc;
     case (opcode)
         op_br: begin
             unique case(branch_funct3_t'(funct3))

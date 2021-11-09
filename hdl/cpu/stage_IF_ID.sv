@@ -47,11 +47,11 @@ begin
         ir_data <= '0;
         pc_data <= '0;
     end
-    else if (flush == 1) begin
+    else if (flush) begin
         ir_data <= 32'h00000013;
         pc_data <= '0;
     end
-    else if (load == 1)
+    else if (load)
     begin
         ir_data <= ir_in;
         pc_data <= pc_in;

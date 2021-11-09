@@ -61,6 +61,9 @@ logic [31:0] forward_mux2_out;
 logic [31:0] alumux1_out, alumux2_out, cmpmux_out;
 logic [31:0] alu_out;
 logic br_en;
+logic flush;
+
+assign flush = control_words[1].opcode == op_br && br_en || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr;  
 
 /* EX/MEM Signals */
 logic load_ex_mem;
@@ -112,7 +115,7 @@ logic [31:0] ir_in;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
-    .flush(br_en),
+    .flush(flush),
     .clk(clk),
     .rst(rst),
     .load(load_if_id),
@@ -164,7 +167,7 @@ regfile REGFILE(
 assign load_id_ex = !stall;
 
 ID_EX stage_id_ex(.*, 
-    .flush(br_en),
+    .flush(flush),
     .load(load_id_ex),
     .control_word_in(control_words[0]), 
     .control_word_out(control_words[1]),
