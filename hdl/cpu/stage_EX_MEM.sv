@@ -88,7 +88,6 @@ begin
         // Load signals from monitor_in
         monitor.commit <= monitor_in.commit;
         monitor.pc_rdata <= monitor_in.pc_rdata;
-        monitor.pc_wdata <= monitor_in.pc_wdata;
         monitor.instruction <= monitor_in.instruction;
         monitor.trap <= monitor_in.trap;
         monitor.rs1_addr <= monitor_in.rs1_addr;
@@ -96,8 +95,14 @@ begin
         monitor.rs1_rdata <= monitor_in.rs1_rdata;
         monitor.rs2_rdata <= monitor_in.rs2_rdata;
 
-        if(br_en_in) begin
+        if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
             monitor.pc_wdata <= alu_in;
+        end
+        else if(control_word_in.opcode == op_jalr) begin
+            monitor.pc_wdata <= {alu_in[31:1], 1'b0};
+        end
+        else begin
+            monitor.pc_wdata <= monitor_in.pc_wdata;
         end
         if(control_word_in.opcode == op_store) begin
             monitor.mem_addr <= alu_in;

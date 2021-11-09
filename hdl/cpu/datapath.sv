@@ -96,7 +96,7 @@ pc_register pc(.*,
 );
 
 always_comb begin
-    if((control_words[1].opcode == op_br && br_en)|| control_words[1].opcode == op_jal)begin
+    if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
         pc_in = alu_out;
     end
     else if(control_words[1].opcode == op_jalr) begin
@@ -112,6 +112,7 @@ end
 
 assign load_if_id = !stall;
 logic [31:0] ir_in;
+logic commit_if;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
@@ -129,7 +130,8 @@ IF_ID stage_if_id(
     .rs2 (rs2),
     .rd (rd),
     .pc_out (pc_id),
-    .ir_out(ir_out)
+    .ir_out(ir_out),
+    .commit(commit_if)
 );
 
 /***************************** DECODE STAGE *****************************/
@@ -146,7 +148,8 @@ IF_ID stage_if_id(
         .PC (pc_id),
         .word(control_words[0]),
         .instruction(ir_out),
-        .monitor(monitors[0])
+        .monitor(monitors[0]),
+        .commit_in(commit_if)
     );
 
 regfile REGFILE(
@@ -317,10 +320,10 @@ forwarding_unit forwarding_unit(
     .EX_MEM_regfile_sel(control_words[1].regfilemux_sel),
     .MEM_WB_rd(control_words[2].rd),
     .EX_MEM_rd(control_words[1].rd),
-    .rs1(rs1_ex), // reg addr from ID/EX stage
-    .rs2(rs2_ex), // reg addr from ID/EX stage
-    .rs1_out(rs1_addr_ex),
-    .rs2_out(rs2_addr_ex),
+    .rs1(rs1_addr_ex), // reg addr from ID/EX stage
+    .rs2(rs2_addr_ex), // reg addr from ID/EX stage
+    .rs1_out(rs1_ex),
+    .rs2_out(rs2_ex),
     .EX_MEM_alu_out(alu_out_mem),
     .EX_MEM_mem_out(data_rdata),
     .MEM_WB_alu_out(alu_out_wb),
