@@ -33,19 +33,24 @@ logic pmem_read_c_i, pmem_resp_c_i;
 logic [31:0] pmem_address_c_i; //from llc
 logic [255:0] pmem_wdata_c_i, pmem_rdata_c_i;//from llc
 
+//Cacheline Adaptor wires
+logic [255:0] line_i, line_o;
+logic [31:0] adaptor_addr;
+logic read_i, write_i, resp_o;
+
+
 datapath datapath(
     .*
 );
 
-
 arbiter arbiter(
     .*,
-    .pmem_resp_m(pmem_resp),
-    .pmem_rdata_m(pmem_rdata),
-    .pmem_wdata_m(pmem_wdata),
-    .pmem_address_m(pmem_address),
-    .pmem_read_m(pmem_read),
-    .pmem_write_m(pmem_write)
+    .pmem_resp_m(resp_o),
+    .pmem_rdata_m(line_o),
+    .pmem_wdata_m(line_i),
+    .pmem_address_m(adaptor_addr),
+    .pmem_read_m(read_i),
+    .pmem_write_m(write_i)
 );
 
 icache instruction_cache(
@@ -79,5 +84,23 @@ dcache data_cache(
     .pmem_resp(pmem_resp_c_d)
 );
 
+
+cacheline_adaptor mem_adaptor(
+    .*,
+    .reset_n(~rst),
+    .line_i(line_i),
+    .line_o(line_o),
+    .address_i(adaptor_addr),
+    .read_i(read_i),
+    .write_i(write_i),
+    .resp_o(resp_o),
+
+    .burst_i(pmem_rdata),
+    .burst_o(pmem_wdata),
+    .address_o(pmem_address),
+    .read_o(pmem_read),
+    .write_o(pmem_write),
+    .resp_i(pmem_resp)
+);
 
 endmodule : mp4

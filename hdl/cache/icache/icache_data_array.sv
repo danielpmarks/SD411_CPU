@@ -4,7 +4,7 @@ help you update the values in the array. */
 
 module icache_data_array (
   input clk,
-  input logic [31:0] load,
+  input logic load,
   input logic [2:0] rindex,
   input logic [2:0] windex,
   input logic [255:0] datain,
