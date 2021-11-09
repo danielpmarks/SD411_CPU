@@ -79,6 +79,7 @@ always_ff@(posedge clk) begin
         control_word.alumux1_sel <= alumux::alumux1_sel_t'(0);
         control_word.alumux2_sel <= alumux::alumux2_sel_t'(0);
         control_word.cmpmux_sel <= cmpmux::cmpmux_sel_t'(0);
+        control_word.load_regfile <= 0;
         //control_word.mem_byte_enable <= 0;
         control_word.rd <= 0;
         control_word.funct3 <= 0;
@@ -86,33 +87,13 @@ always_ff@(posedge clk) begin
         control_word.pc <= 0;
     end
     else if (flush) begin
-        rs1 <= 32'd0;
-        rs2 <= 32'd0;
-        rs1_addr <= 5'd0;
-        rs2_addr <= 5'd0;
-
-        imm.i_imm <= 32'd0;
-        imm.s_imm <= 32'd0;
-        imm.b_imm <= 32'd0;
-        imm.u_imm <= 32'd0;
-        imm.j_imm <= 32'd0;
-
-        monitor.commit <= 0;
-        
         control_word.opcode <= op_imm;
         control_word.aluop <= alu_add;
-        control_word.mem_read <= 0;
-        control_word.mem_write <= 0;
-        control_word.regfilemux_sel <= regfilemux::alu_out;
-        control_word.pcmux_sel <= pcmux::pc_plus4;
-        control_word.alumux1_sel <= alumux::rs1_out;
-        control_word.alumux2_sel <= alumux::rs2_out;
-        control_word.cmpmux_sel <= cmpmux::rs2_out;
-        control_word.load_regfile <= 0;
-        control_word.rd <= 0;
-        control_word.funct3 <= 0;
-        control_word.funct7 <= 0;
-        control_word.pc <= 0;
+        control_word.rd <= '0;
+        rs1 <= '0;
+        rs2 <= '0;
+
+        monitor.commit <= 0;
     end
     else if(load) begin
         rs1 <= rs1_in;

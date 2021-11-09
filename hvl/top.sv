@@ -41,7 +41,7 @@ assign rvfi.rs1_rdata = dut.datapath.monitors[3].rs1_rdata;
 assign rvfi.rs2_rdata = dut.datapath.monitors[3].rs2_rdata;
 assign rvfi.load_regfile = dut.datapath.load_regfile;
 assign rvfi.rd_addr = dut.datapath.monitors[3].rd_addr;
-assign rvfi.rd_wdata = dut.datapath.regfilemux_out;
+assign rvfi.rd_wdata = rvfi.rd_addr ? dut.datapath.regfilemux_out : 0;
 
 //PC:
 assign rvfi.pc_rdata = dut.datapath.monitors[3].pc_rdata;

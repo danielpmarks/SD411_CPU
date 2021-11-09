@@ -11,7 +11,8 @@ module control_rom(
     output rv32i_control_word word,
 
     input [31:0] instruction,
-    output monitor_t monitor
+    output monitor_t monitor,
+    input commit_in
 
 );
 logic [3:0] mem_byte_enable;
@@ -20,6 +21,7 @@ logic mem_write;
 logic write_reg;
 logic trap;
 logic commit;
+
 regfilemux::regfilemux_sel_t regfilemux_sel;
 pcmux::pcmux_sel_t pcmux_sel;
 alumux::alumux1_sel_t alumux1_sel;
@@ -27,6 +29,7 @@ alumux::alumux2_sel_t alumux2_sel;
 cmpmux::cmpmux_sel_t cmpmux_sel;
 logic load_regfile;
 alu_ops aluop;
+
 assign word.opcode = opcode;
 assign word.aluop = aluop;
 assign word.load_regfile = load_regfile;
@@ -41,6 +44,8 @@ assign word.rd = rd;
 assign word.funct3 = funct3;
 assign word.pc = PC;
 assign word.funct7 = funct7;
+
+assign commit = commit_in & (~trap && (load_regfile | (opcode == op_br)));
 
 always_comb
 begin : word_generator
@@ -63,7 +68,7 @@ begin : word_generator
     aluop = alu_ops'(funct3);
     load_regfile = 1'b0;
     trap = 0;
-    commit = load_regfile || opcode == op_br || opcode == op_jal || opcode == op_jalr || opcode == op_auipc;
+    
     case (opcode)
         op_br: begin
             unique case(branch_funct3_t'(funct3))
@@ -194,7 +199,6 @@ begin : word_generator
         end
         default: begin 
             trap = 1;
-            commit = 0;
         end
     endcase
 end

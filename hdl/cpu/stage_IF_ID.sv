@@ -18,13 +18,16 @@ module IF_ID(
     output logic [4:0] rs2,
     output logic [4:0] rd,
     output logic [31:0] pc_out,
-    output logic [31:0] ir_out
+    output logic [31:0] ir_out,
+    output logic commit
 );
 
 logic [31:0] ir_data;
 logic [31:0] pc_data;
+logic commit_data;
 
 assign ir_out = ir_data;
+assign commit = commit_data;
 
 assign funct3 = ir_data[14:12];
 assign funct7 = ir_data[31:25];
@@ -42,6 +45,7 @@ assign pc_out = pc_data;
 
 always_ff @(posedge clk)
 begin
+    commit_data <= 1;
     if (rst)
     begin
         ir_data <= '0;
@@ -50,6 +54,7 @@ begin
     else if (flush) begin
         ir_data <= 32'h00000013;
         pc_data <= '0;
+        commit_data <= '0;
     end
     else if (load)
     begin
