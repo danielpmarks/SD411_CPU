@@ -59,14 +59,21 @@ always_comb begin
         end
 
         instruction_cache: begin
-            if (pmem_resp_m) begin
+            pmem_read_m = pmem_read_c_i;
+            pmem_address_m = pmem_address_c_i;
+            pmem_write_m = 1'b0;
+            if (pmem_resp_m == 1) begin
                 pmem_resp_c_i = pmem_resp_m;
                 pmem_rdata_c_i = pmem_rdata_m;
             end
         end
 
         data_cache: begin
-            if (pmem_resp_m) begin
+            pmem_read_m = pmem_read_c_d;
+            pmem_write_m = pmem_write_c_d;
+            pmem_address_m = pmem_address_c_d;
+            pmem_wdata_m = pmem_wdata_c_d;
+            if (pmem_resp_m == 1) begin
                 pmem_resp_c_d = pmem_resp_m;
                 pmem_rdata_c_d = pmem_rdata_m;
             end
@@ -93,13 +100,13 @@ always_comb begin : next_state_logic
             if (pmem_read_c_d || pmem_write_c_d) begin
                 next_state = data_cache;
             end
-            else begin
+            else if(pmem_resp_m == 1) begin
                 next_state = idle;
             end
         end
 
         data_cache: begin
-            if (pmem_resp_m) begin
+            if (pmem_resp_m == 1) begin
                 next_state = idle;
             end
         end

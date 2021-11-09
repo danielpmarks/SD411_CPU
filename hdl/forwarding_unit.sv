@@ -157,7 +157,7 @@ always_comb begin : forward1_mux
             endcase
         end
         2'b00: forward_mux1_out = rs1_out;
-        default: `BAD_MUX_SEL;
+        default: ;//`BAD_MUX_SEL;
     endcase
 end
 
@@ -188,7 +188,7 @@ always_comb begin : forward2_mux
             endcase
         end
         2'b00: forward_mux2_out = rs2_out;
-        default: `BAD_MUX_SEL;
+        default: ;//`BAD_MUX_SEL;
     endcase
 end
 endmodule : forwarding_unit
