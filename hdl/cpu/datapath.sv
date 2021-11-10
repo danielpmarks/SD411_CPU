@@ -235,12 +235,14 @@ end
 
 assign load_ex_mem = !stall;
 assign data_addr = {mar_out[31:2], 2'b00};
+logic flush_ex_mem;
 
 EX_MEM stage_ex_mem(
     .*,
     .load(load_ex_mem),
     .control_word_in(control_words[1]),
     .control_word_out(control_words[2]),
+    .rs1_in(forward_mux1_out),
     .rs2_in(forward_mux2_out),
     .alu_in(alu_out),
     .mar_in(alu_out),
@@ -256,7 +258,8 @@ EX_MEM stage_ex_mem(
 
     .imm_out(immediates[2]),
     .monitor_in(monitors[1]),
-    .monitor_out(monitors[2])
+    .monitor_out(monitors[2]),
+    .flush(flush_ex_mem)
 );
 
 always_comb begin
@@ -292,7 +295,7 @@ end
 /***************************** MEM/WB BUFFER ********************************/
 
 assign load_mem_wb = !stall;
-
+logic flush_mem_wb;
 
 MEM_WB stage_mem_wb(
     .*,
@@ -312,14 +315,16 @@ MEM_WB stage_mem_wb(
     .u_imm(u_imm_wb),
 
     .monitor_in(monitors[2]),
-    .monitor_out(monitors[3])
+    .monitor_out(monitors[3]),
+
+    .flush(flush_mem_wb)
 );
 
 forwarding_unit forwarding_unit(
     .MEM_WB_regfile_sel(control_words[2].regfilemux_sel),
     .EX_MEM_regfile_sel(control_words[1].regfilemux_sel),
-    .MEM_WB_rd(control_words[2].rd),
-    .EX_MEM_rd(control_words[1].rd),
+    .MEM_WB_rd(rd_wb),
+    .EX_MEM_rd(control_words[2].rd),
     .rs1(rs1_addr_ex), // reg addr from ID/EX stage
     .rs2(rs2_addr_ex), // reg addr from ID/EX stage
     .rs1_out(rs1_ex),
@@ -329,7 +334,10 @@ forwarding_unit forwarding_unit(
     .MEM_WB_alu_out(alu_out_wb),
     .MEM_WB_mem_out(mdr_out_wb),
     .forward_mux1_out(forward_mux1_out),
-    .forward_mux2_out(forward_mux2_out)
+    .forward_mux2_out(forward_mux2_out),
+
+    .flush_ex_mem(flush_ex_mem),
+    .flush_mem_wb(flush_mem_wb)
 
 );
 

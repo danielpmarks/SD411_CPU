@@ -22,7 +22,9 @@ module MEM_WB(
     output [31:0] u_imm,
 
     input monitor_t monitor_in,
-    output monitor_t monitor_out
+    output monitor_t monitor_out,
+
+    output logic flush
 );
 
 rv32i_control_word control_word;
@@ -32,6 +34,7 @@ packed_imm imm;
 monitor_t monitor;
 
 assign monitor_out = monitor;
+assign flush = ~monitor.commit;
 
 assign rd = control_word.rd;
 assign load_regfile = control_word.load_regfile;

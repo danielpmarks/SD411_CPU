@@ -111,10 +111,9 @@ always_ff@(posedge clk) begin
         monitor.trap <= monitor_in.trap;
 
         // Load new monitor signals
-        monitor.rs1_addr <= rs1_addr;
-        monitor.rs2_addr <= rs2_addr;
-        monitor.rs1_rdata <= rs1;
-        monitor.rs2_rdata <= rs2;
+        monitor.rs1_addr <= rs1_addr_in;
+        monitor.rs2_addr <= rs2_addr_in;
+        
 
 
     end
@@ -122,7 +121,7 @@ always_ff@(posedge clk) begin
         rs1 <= rs1;
         rs2 <= rs2;
         rs1_addr <= rs1_addr;
-        rs2_addr <= rs1_addr;
+        rs2_addr <= rs2_addr;
         imm <= imm;
         control_word <= control_word;
 

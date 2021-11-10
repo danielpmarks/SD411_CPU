@@ -45,26 +45,27 @@ assign pc_out = pc_data;
 
 always_ff @(posedge clk)
 begin
-    commit_data <= 1;
     if (rst)
     begin
         ir_data <= '0;
         pc_data <= '0;
     end
-    else if (flush) begin
-        ir_data <= 32'h00000013;
-        pc_data <= '0;
-        commit_data <= '0;
-    end
     else if (load)
     begin
         ir_data <= ir_in;
         pc_data <= pc_in;
+        commit_data <= 1;
+        if (flush) begin
+            ir_data <= 32'h00000013;
+            pc_data <= '0;
+            commit_data <= '0;
+        end
     end
     else
     begin
         ir_data <= ir_data;
         pc_data <= pc_data;
+        commit_data <= commit_data;
     end
 end
 

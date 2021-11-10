@@ -15,7 +15,10 @@ module forwarding_unit
     input logic [31:0] MEM_WB_alu_out,
     input logic [31:0] MEM_WB_mem_out,
     output logic [31:0] forward_mux1_out,
-    output logic [31:0] forward_mux2_out
+    output logic [31:0] forward_mux2_out,
+
+    input logic flush_ex_mem,
+    input logic flush_mem_wb
 );
 logic MEM_WB_rd_rs1; // comparing result of MEM_WB_rd == rs1
 logic EX_MEM_rd_rs1;// comparing result of EX_MEM_rd == rs1
@@ -30,20 +33,20 @@ always_comb begin : cmp
     EX_MEM_rd_rs1 = 0;
     MEM_WB_rd_rs2 = 0;
     EX_MEM_rd_rs2 = 0;
-    if (rs1 == MEM_WB_rd) begin
+    if (rs1 != 0 && rs1 == MEM_WB_rd && ~flush_mem_wb) begin
         MEM_WB_rd_rs1 = 1;
     end
 
-    if (rs1 == EX_MEM_rd) begin
+    if (rs1 != 0 && rs1 == EX_MEM_rd && ~flush_ex_mem) begin
         MEM_WB_rd_rs1 = 0;
         EX_MEM_rd_rs1 = 1;
     end
 
-    if (rs2 == MEM_WB_rd) begin
+    if (rs2 != 0 && rs2 == MEM_WB_rd && ~flush_mem_wb) begin
         MEM_WB_rd_rs2 = 1;
     end
 
-    if (rs2 == EX_MEM_rd) begin
+    if (rs2 != 0 && rs2 == EX_MEM_rd && ~flush_ex_mem) begin
         MEM_WB_rd_rs2 = 0;
         EX_MEM_rd_rs2 = 1;
     end
