@@ -45,7 +45,7 @@ assign word.funct3 = funct3;
 assign word.pc = PC;
 assign word.funct7 = funct7;
 
-assign commit = commit_in & (~trap && (load_regfile | (opcode == op_br)));
+assign commit = commit_in & (~trap && (load_regfile | (opcode == op_br) | (opcode == op_store)));
 
 always_comb
 begin : word_generator

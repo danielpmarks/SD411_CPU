@@ -98,6 +98,9 @@ begin
 
         monitor.rs1_rdata <= rs1_in;
         monitor.rs2_rdata <= rs2_in;
+        monitor.mem_addr <= 32'd0;
+        monitor.mem_wmask <= 4'd0;
+        monitor.mem_rmask <= 4'd0;
 
         if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
             monitor.pc_wdata <= alu_in;
