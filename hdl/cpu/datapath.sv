@@ -321,8 +321,8 @@ MEM_WB stage_mem_wb(
 );
 
 forwarding_unit forwarding_unit(
-    .MEM_WB_regfile_sel(control_words[2].regfilemux_sel),
-    .EX_MEM_regfile_sel(control_words[1].regfilemux_sel),
+    .MEM_WB_regfile_sel(regfilemux_sel),
+    .EX_MEM_regfile_sel(control_words[2].regfilemux_sel),
     .MEM_WB_rd(rd_wb),
     .EX_MEM_rd(control_words[2].rd),
     .rs1(rs1_addr_ex), // reg addr from ID/EX stage

@@ -43,7 +43,7 @@ module dcache_control (
 
 enum int unsigned {
     /* List of states */
-	idle,
+	
     hit,
     write_back,
     write_cache
@@ -73,70 +73,69 @@ begin : state_actions
     /* Actions for each state */
 
     unique case (state) 
-        idle: begin
-            //if (mem_read | mem_write) next_states = hit;
-            //else next_states = idle;
-        end
+        
 
         hit: begin
             //miss
-            if (hit_datapath == 0) begin
-                //set lru to be the other one
-                set_lru = ~lru_output;
-                
-                
-                if (dirty_out[lru_output]) begin
-                    //mem_enable_sel = 1'b1;
-                    set_dirty[lru_output] = 0;
-                    load_dirty[lru_output] = 1;
+            if (mem_read | mem_write) begin
+                if (hit_datapath == 0) begin
+                    //set lru to be the other one
+                    set_lru = ~lru_output;
+                    
+                    
+                    if (dirty_out[lru_output]) begin
+                        //mem_enable_sel = 1'b1;
+                        set_dirty[lru_output] = 0;
+                        load_dirty[lru_output] = 1;
+                    end
                 end
-            end
 
-            //hit first way
-            if (hit_datapath == 2'b01) begin
-                //first data
-                set_lru = 1;
-                
-                if (mem_read) begin
-                    mem_enable_sel = 1'b0;
-                    write_enable_0 = 32'd0;
-                    mem_resp = 1'b1;
-                    load_lru = 1'b1;
+                //hit first way
+                if (hit_datapath == 2'b01) begin
+                    //first data
+                    set_lru = 1;
+                    
+                    if (mem_read) begin
+                        mem_enable_sel = 1'b0;
+                        write_enable_0 = 32'd0;
+                        mem_resp = 1'b1;
+                        load_lru = 1'b1;
+                    end
+                    else if (mem_write) begin
+                        mem_resp = 1'b1;
+                        //set the first dirty
+                        set_dirty = 2'b01;
+                        load_dirty = 2'b01;
+                        mem_enable_sel = 1'b0;
+                        write_enable_0 = mem_byte_enable256;
+                        //set lru at the end of the write
+                        load_lru = 1'b1;
+                    end
                 end
-                else if (mem_write) begin
-                    mem_resp = 1'b1;
-                    //set the first dirty
-                    set_dirty = 2'b01;
-                    load_dirty = 2'b01;
-                    mem_enable_sel = 1'b0;
-                    write_enable_0 = mem_byte_enable256;
-                    //set lru at the end of the write
-                    load_lru = 1'b1;
-                end
-            end
 
-            //hit second way
-            if (hit_datapath == 2'b10) begin
-                //second data
-                set_lru = 0;
-                
-                if (mem_read) begin
-                    mem_enable_sel = 1'b0;
-                    write_enable_1 = 32'd0;
-                    mem_resp = 1'b1;
-                    load_lru = 1'b1;
-                end
-                else if (mem_write) begin
-                    mem_resp = 1'b1;
-                    //set the second dirty
-                    set_dirty = 2'b10;
-                    load_dirty = 2'b10;
-                    mem_enable_sel = 1'b0;
+                //hit second way
+                if (hit_datapath == 2'b10) begin
+                    //second data
+                    set_lru = 0;
+                    
+                    if (mem_read) begin
+                        mem_enable_sel = 1'b0;
+                        write_enable_1 = 32'd0;
+                        mem_resp = 1'b1;
+                        load_lru = 1'b1;
+                    end
+                    else if (mem_write) begin
+                        mem_resp = 1'b1;
+                        //set the second dirty
+                        set_dirty = 2'b10;
+                        load_dirty = 2'b10;
+                        mem_enable_sel = 1'b0;
 
-                    write_enable_1 = mem_byte_enable256;
+                        write_enable_1 = mem_byte_enable256;
 
-                    //set lru at the end of the write
-                    load_lru = 1'b1;
+                        //set lru at the end of the write
+                        load_lru = 1'b1;
+                    end
                 end
             end
         end
@@ -180,18 +179,20 @@ begin : next_state_logic
      * for transitioning between states */
     next_states = state;
     unique case (state)
-        idle: begin
+        /*idle: begin
             if (mem_read | mem_write) next_states = hit;
             else next_states = idle;
-        end
+        end*/
 
         hit: begin
-            if (hit_datapath == 0) begin
-                if(dirty_out[lru_output]) next_states = write_back;
-                else next_states = write_cache;
-            end
-            else begin
-                next_states = idle;
+            if(mem_read | mem_write) begin
+                if (hit_datapath == 0) begin
+                    if(dirty_out[lru_output]) next_states = write_back;
+                    else next_states = write_cache;
+                end
+                else begin
+                    next_states = hit;
+                end
             end
         end
 
@@ -201,11 +202,11 @@ begin : next_state_logic
         end
 
         write_cache: begin
-            if (pmem_resp) next_states = idle;
+            if (pmem_resp) next_states = hit;
             else next_states = write_cache;
         end
 		
-        default: next_states = idle;
+        default: next_states = hit;
 	
 	endcase
 end
