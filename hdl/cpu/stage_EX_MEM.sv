@@ -8,6 +8,7 @@ module EX_MEM(
     input rv32i_control_word control_word_in,
     output rv32i_control_word control_word_out,
 
+    input logic [31:0] rs1_in,
     input logic [31:0] rs2_in,
     input logic [31:0] alu_in,
     input logic [31:0] mar_in,
@@ -24,7 +25,8 @@ module EX_MEM(
     input monitor_t monitor_in,
     output monitor_t monitor_out,
 
-    output packed_imm imm_out
+    output packed_imm imm_out,
+    output logic flush
 );
 
 rv32i_control_word control_word;
@@ -34,6 +36,7 @@ packed_imm imm;
 monitor_t monitor;
 
 assign monitor_out = monitor;
+assign flush = ~monitor.commit;
 
 assign control_word_out = control_word;
 assign mem_wdata = rs2;
@@ -92,8 +95,9 @@ begin
         monitor.trap <= monitor_in.trap;
         monitor.rs1_addr <= monitor_in.rs1_addr;
         monitor.rs2_addr <= monitor_in.rs2_addr;
-        monitor.rs1_rdata <= monitor_in.rs1_rdata;
-        monitor.rs2_rdata <= monitor_in.rs2_rdata;
+
+        monitor.rs1_rdata <= rs1_in;
+        monitor.rs2_rdata <= rs2_in;
 
         if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
             monitor.pc_wdata <= alu_in;

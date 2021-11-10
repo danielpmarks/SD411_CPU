@@ -24,7 +24,7 @@ bit f;
 /************************ Signals necessary for monitor **********************/
 // This section not required until CP2
 
-assign rvfi.commit = dut.datapath.monitors[3].commit; // Set high when a valid instruction is modifying regfile or PC
+assign rvfi.commit = !dut.datapath.stall && dut.datapath.monitors[3].commit; // Set high when a valid instruction is modifying regfile or PC
 assign rvfi.halt = dut.datapath.monitors[3].pc_wdata == dut.datapath.monitors[3].pc_rdata && dut.datapath.monitors[3].commit == 1;   // Set high when you detect an infinite loop
 initial rvfi.order = 0;
 always @(posedge itf.clk iff rvfi.commit) rvfi.order <= rvfi.order + 1; // Modify for OoO
