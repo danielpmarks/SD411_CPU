@@ -28,15 +28,22 @@ packed_imm immediates[2:0];
 monitor_t monitors[3:0];
 
 logic stall;
-assign stall = !inst_resp || ((data_read || data_write) && !data_resp); 
+assign stall = !inst_resp || (monitors[2].commit && (data_read || data_write) && !data_resp); 
 
 /* IF Signals */
 logic load_pc;
 logic [31:0] pc_in, pc_out;
 logic [31:0] ir_out;
+prediction_t prediction;
+logic [31:0] target_pc;
+logic [31:0] ir_in;
+logic commit_if;
+logic [31:0] target_pc_id;
 
 /* IF/ID Signals */
 logic load_if_id;
+logic [31:0] target_pc_out;
+prediction_t prediction_out;
 rv32i_opcode opcode;
 logic [2:0] funct3;
 logic [6:0] funct7;
@@ -57,13 +64,15 @@ branch_funct3_t cmpop;
 logic [31:0] pc_ex, rs1_ex, rs2_ex;
 logic [31:0] forward_mux1_out;
 logic [31:0] forward_mux2_out;
+
 /* Execution Signals */
 logic [31:0] alumux1_out, alumux2_out, cmpmux_out;
 logic [31:0] alu_out;
-logic br_en;
+logic br_en, branch_taken;
 logic flush;
+logic correct_prediction, correct_target;
 
-assign flush = control_words[1].opcode == op_br && br_en || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr;  
+assign flush = monitors[1].commit && (!correct_prediction || (correct_prediction && (control_words[1].prediction == st || control_words[1].prediction == wt) && !correct_target));  
 
 /* EX/MEM Signals */
 logic load_ex_mem;
@@ -95,15 +104,32 @@ pc_register pc(.*,
     .out(pc_out)
 );
 
+local_branch_table branch_predictor(
+    .*,
+    .update(control_words[1].opcode == op_br),
+    .correct(correct_prediction),
+    .current_pc(pc_out),
+    .pc_update(control_words[1].pc),
+    .calculated_target(alu_out),
+    .prediction(prediction),
+    .pc_prediction(target_pc)
+);
+
 always_comb begin
-    if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
-        pc_in = alu_out;
-    end
-    else if(control_words[1].opcode == op_jalr) begin
-        pc_in = {alu_out[31:1], 1'b0};
+    if(flush) begin
+        unique case(control_words[1].prediction)
+            st, wt: pc_in = control_words[1].pc + 4;
+            snt, wnt: pc_in = control_words[1].opcode == op_jalr ? {alu_out[31:1],1'b0} : alu_out;
+        endcase
     end
     else begin
         pc_in = pc_out + 4;
+        if(rv32i_opcode'(ir_in[6:0]) == op_br || rv32i_opcode'(ir_in[6:0]) == op_jal || rv32i_opcode'(ir_in[6:0]) == op_jalr) begin
+            unique case(prediction)
+                st, wt: pc_in = target_pc;
+                snt, wnt: pc_in = pc_out + 4;
+            endcase
+        end
     end
 end
 
@@ -111,8 +137,6 @@ end
 /***************************** IF/ID BUFFER *****************************/
 
 assign load_if_id = !stall;
-logic [31:0] ir_in;
-logic commit_if;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
@@ -122,6 +146,8 @@ IF_ID stage_if_id(
     .load(load_if_id),
     .ir_in(ir_in),
     .pc_in(pc_out),
+    .pc_target_in(target_pc),
+    .prediction_in(prediction),
     .funct3 (funct3),
     .funct7 (funct7),
     .opcode (opcode),
@@ -130,6 +156,8 @@ IF_ID stage_if_id(
     .rs2 (rs2),
     .rd (rd),
     .pc_out (pc_id),
+    .pc_target_out(target_pc_out),
+    .prediction_out(prediction_out),
     .ir_out(ir_out),
     .commit(commit_if)
 );
@@ -146,10 +174,13 @@ IF_ID stage_if_id(
         .funct3 (funct3),
         .funct7 (funct7),
         .PC (pc_id),
+        .pc_target(target_pc_out),
         .word(control_words[0]),
         .instruction(ir_out),
         .monitor(monitors[0]),
-        .commit_in(commit_if)
+        .commit_in(commit_if),
+        .prediction(prediction_out),
+        .flush(flush)
     );
 
 regfile REGFILE(
@@ -201,6 +232,22 @@ ID_EX stage_id_ex(.*,
 
 alu ALU(.a(alumux1_out), .b(alumux2_out), .f(alu_out), .aluop(aluop));
 cmp CMP(.a(forward_mux1_out), .b(cmpmux_out), .cmpop(cmpop), .br_en(br_en));
+
+/* Correct prediction logic */
+always_comb begin
+	correct_target = 1'b1;
+    if(control_words[1].opcode == op_br || control_words[1].opcode == op_jal)
+        correct_target = control_words[1].pc_target == alu_out;
+    else if(control_words[1].opcode == op_jalr)
+        correct_target = control_words[1].pc_target == {alu_out[31:1],1'b0};
+
+    branch_taken = control_words[1].opcode == op_br ? br_en : control_words[1].opcode == op_jal | control_words[1].opcode == op_jalr;
+    unique case(control_words[1].prediction)
+        st, wt: correct_prediction = branch_taken;
+        snt, wnt: correct_prediction = !branch_taken;
+        default: correct_prediction = 1'b1;
+    endcase
+end
 
 /* MUXES */
 always_comb begin
@@ -281,8 +328,8 @@ always_comb begin
             sb: begin
                 unique case(mar_out[1:0])
                     2'b11: data_wdata = mem_wdata << 24;
-                    2'b01: data_wdata = mem_wdata << 16;
-                    2'b10: data_wdata = mem_wdata << 8;
+                    2'b10: data_wdata = mem_wdata << 16;
+                    2'b01: data_wdata = mem_wdata << 8;
                     2'b00: data_wdata = mem_wdata;
                 endcase
                 data_mbe = 4'b0001 << mar_out[1:0];
@@ -349,7 +396,7 @@ always_comb begin
         regfilemux::br_en: regfilemux_out = {31'd0, br_en_wb};
         regfilemux::u_imm: regfilemux_out = u_imm_wb;
         regfilemux::lw: regfilemux_out = mdr_out_wb;
-        regfilemux::pc_plus4: regfilemux_out = pc_out + 4;
+        regfilemux::pc_plus4: regfilemux_out = pc_wb + 4;
         regfilemux::lb: begin 
             unique case(alu_out_wb[1:0])
                 2'b11: regfilemux_out = {{24{mdr_out_wb[31]}}, mdr_out_wb[31:24]};
