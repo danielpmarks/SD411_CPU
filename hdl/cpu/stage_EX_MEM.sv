@@ -45,8 +45,8 @@ assign mar_out = mar;
 assign br_en_out = br_en;
 assign imm_out = imm;
 
-assign mem_read = control_word.mem_read;
-assign mem_write = control_word.mem_write;
+assign mem_read = monitor.commit && control_word.mem_read;
+assign mem_write = monitor.commit && control_word.mem_write;
 //assign mem_byte_enable = control_word.mem_byte_enable;
 
 always_ff @(posedge clk)
@@ -101,6 +101,7 @@ begin
         monitor.mem_addr <= 32'd0;
         monitor.mem_wmask <= 4'd0;
         monitor.mem_rmask <= 4'd0;
+        
 
         if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
             monitor.pc_wdata <= alu_in;
@@ -113,16 +114,36 @@ begin
         end
         if(control_word_in.opcode == op_store) begin
             monitor.mem_addr <= alu_in;
-            monitor.mem_wdata <= rs2_in;
+    
             unique case(store_funct3_t'(control_word_in.funct3))
-                sw: monitor.mem_wmask <= 4'b1111;
-                sh: monitor.mem_wmask <= 4'b0011 << {alu_in[1], 1'b0};
-                sb: monitor.mem_wmask <= 4'b0001 << alu_in[1:0];
+                sw: begin 
+                    monitor.mem_wmask <= 4'b1111;
+                    monitor.mem_wdata <= rs2_in;
+                end
+                sh: begin 
+                    monitor.mem_wmask <= 4'b0011 << {alu_in[1], 1'b0};
+                    unique case(mar_in[1])
+                        1'b1: monitor.mem_wdata = rs2_in << 16;
+                        1'b0: monitor.mem_wdata = rs2_in;
+                    endcase
+                end
+                sb: begin 
+                    monitor.mem_wmask <= 4'b0001 << alu_in[1:0];
+                    unique case(mar_in[1:0])
+                        2'b11: monitor.mem_wdata = rs2_in << 24;
+                        2'b10: monitor.mem_wdata = rs2_in << 16;
+                        2'b01: monitor.mem_wdata = rs2_in << 8;
+                        2'b00: monitor.mem_wdata = rs2_in;
+                    endcase
+                end
 					 default: monitor.mem_wmask <= 4'b1111;
             endcase
         end
         else if(control_word_in.opcode == op_load) begin
             monitor.mem_addr <= alu_in;
+        end
+        else begin
+            monitor.mem_wdata <= 32'd0;
         end
     end
     else

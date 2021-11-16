@@ -1,0 +1,64 @@
+import rv32i_types::*;
+
+module local_branch_table #(parameter num_bits = 5)
+(
+    input clk,
+    input rst,
+    input update,
+    input correct,
+    input [31:0] pc_in,
+    input [31:0] calculated_target,
+    output logic [1:0] prediction,
+    output logic [31:0] pc_prediction
+);
+
+logic valid;
+prediction_t prediction, new_prediction;
+logic [31:0] target;
+
+assign pc_prediction = valid ? target : pc_in + 4;
+
+btb_array #(1) valid(
+    .*,
+    .load(update),
+    .rindex(pc_in[num_bits-1:0]),
+    .windex(pc_in[num_bits-1:0]),
+    .datain(1'b1),
+    .dataout(valid)
+);
+
+btb_array #(2) predictions(
+    .*,
+    .load(update),
+    .rindex(pc_in[num_bits-1:0]),
+    .windex(pc_in[num_bits-1:0]),
+    .datain(new_prediction),
+    .dataout(prediction_t'(prediction))
+);
+btb_array #(32) targets(
+    .*,
+    .load(update),
+    .rindex(pc_in[num_bits-1:0]),
+    .windex(pc_in[num_bits-1:0]),
+    .datain(calculated_target),
+    .dataout(target)
+)
+
+always_comb begin
+    new_prediction = prediction;
+    if(correct) begin
+        unique case(prediction)
+            snt, st: new_prediction = prediction;
+            wnt: new_prediction = snt;
+            wt: new_prediction = st;
+        endcase
+    end
+    else begin
+        unique case(prediction)
+            snt, wt: new_prediction = wnt;
+            st, wnt: new_prediction = wt;
+        endcase
+    end
+end
+    
+endmodule

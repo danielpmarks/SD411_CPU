@@ -72,6 +72,13 @@ typedef enum bit [2:0] {
 } alu_ops;
 
 
+typedef enum logic [1:0] { 
+    snt = 2'b00,
+    wnt = 2'b01,
+    wt = 2'b10,
+    st = 2'b11
+} prediction_t;
+
 //cp1
 typedef struct packed {
     rv32i_opcode opcode;
@@ -86,14 +93,18 @@ typedef struct packed {
     cmpmux::cmpmux_sel_t cmpmux_sel;
 
     logic mem_read;
-	logic mem_write;
+    logic mem_write;
 
     logic [4:0] rd;
     logic [2:0] funct3;
     logic [6:0] funct7;
 
     logic [31:0] pc;
+
+    prediction_t prediction;
+    logic [31:0] pc_target;
 } rv32i_control_word;
+
 
 //cp1
 typedef struct packed {
@@ -122,6 +133,8 @@ typedef struct packed {
     logic [31:0] mem_rdata;
     logic [31:0] mem_wdata;
 } monitor_t;
+
+
 
 endpackage : rv32i_types
 
