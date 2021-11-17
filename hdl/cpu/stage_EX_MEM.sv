@@ -8,6 +8,7 @@ module EX_MEM(
     input rv32i_control_word control_word_in,
     output rv32i_control_word control_word_out,
 
+    input logic [31:0] rs1_in,
     input logic [31:0] rs2_in,
     input logic [31:0] alu_in,
     input logic [31:0] mar_in,
@@ -20,14 +21,22 @@ module EX_MEM(
     output logic [31:0] alu_out,
     output logic [31:0] mar_out,
     output logic br_en_out,
-     
-    output packed_imm imm_out
+    
+    input monitor_t monitor_in,
+    output monitor_t monitor_out,
+
+    output packed_imm imm_out,
+    output logic flush
 );
 
 rv32i_control_word control_word;
 logic [31:0] rs2, alu, mar;
 logic br_en;
 packed_imm imm;
+monitor_t monitor;
+
+assign monitor_out = monitor;
+assign flush = ~monitor.commit;
 
 assign control_word_out = control_word;
 assign mem_wdata = rs2;
@@ -78,6 +87,43 @@ begin
         mar <= mar_in;
         br_en <= br_en_in;
         imm <= imm_in;
+
+        // Load signals from monitor_in
+        monitor.commit <= monitor_in.commit;
+        monitor.pc_rdata <= monitor_in.pc_rdata;
+        monitor.instruction <= monitor_in.instruction;
+        monitor.trap <= monitor_in.trap;
+        monitor.rs1_addr <= monitor_in.rs1_addr;
+        monitor.rs2_addr <= monitor_in.rs2_addr;
+
+        monitor.rs1_rdata <= rs1_in;
+        monitor.rs2_rdata <= rs2_in;
+        monitor.mem_addr <= 32'd0;
+        monitor.mem_wmask <= 4'd0;
+        monitor.mem_rmask <= 4'd0;
+
+        if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
+            monitor.pc_wdata <= alu_in;
+        end
+        else if(control_word_in.opcode == op_jalr) begin
+            monitor.pc_wdata <= {alu_in[31:1], 1'b0};
+        end
+        else begin
+            monitor.pc_wdata <= monitor_in.pc_wdata;
+        end
+        if(control_word_in.opcode == op_store) begin
+            monitor.mem_addr <= alu_in;
+            monitor.mem_wdata <= rs2_in;
+            unique case(store_funct3_t'(control_word_in.funct3))
+                sw: monitor.mem_wmask <= 4'b1111;
+                sh: monitor.mem_wmask <= 4'b0011 << {alu_in[1], 1'b0};
+                sb: monitor.mem_wmask <= 4'b0001 << alu_in[1:0];
+					 default: monitor.mem_wmask <= 4'b1111;
+            endcase
+        end
+        else if(control_word_in.opcode == op_load) begin
+            monitor.mem_addr <= alu_in;
+        end
     end
     else
     begin
@@ -87,6 +133,8 @@ begin
         mar <= mar;
         br_en <= br_en;
         imm <= imm;
+
+        monitor <= monitor;
     end
 end
 

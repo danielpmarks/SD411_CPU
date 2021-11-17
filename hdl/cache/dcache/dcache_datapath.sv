@@ -2,7 +2,7 @@
 valid, dirty, tag, and LRU arrays, comparators, muxes,
 logic gates and other supporting logic. */
 
-module cache_datapath #(
+module dcache_datapath #(
     parameter s_offset = 5,
     parameter s_index  = 3,
     parameter s_tag    = 32 - s_offset - s_index,
@@ -64,7 +64,6 @@ module cache_datapath #(
 //internal signal
 logic [23:0] input_tag;
 logic [2:0] input_index;
-logic [4:0] input_offset;
 logic hit_0, hit_1;
 //logic [1:0] hit;
 logic [255:0] data_array_in;
@@ -72,17 +71,15 @@ logic [255:0] output_data_0;
 logic [255:0] output_data_1;
 logic [23:0] tag_output_0;
 logic [23:0] tag_output_1;
-//logic [31:0] write_enable_0;
-//logic [31:0] write_enable_1;
 
 //breaking down mem_address
 assign input_tag = mem_address[31:8];
 assign input_index = mem_address[7:5];
-assign input_offset = mem_address[4:0];
+
 
 //hit
-assign hit_0 = (mem_write | mem_read) & valid_out[0] ? ((tag_output_0 == input_tag) ? 1 : 0) : 0;
-assign hit_1 = (mem_write | mem_read) & valid_out[1] ? ((tag_output_1 == input_tag) ? 1 : 0) : 0;
+assign hit_0 = (mem_write | mem_read) && valid_out[0] && (tag_output_0 == input_tag);
+assign hit_1 = (mem_write | mem_read) && valid_out[1] && (tag_output_1 == input_tag);
 
 assign hit_datapath = {hit_1, hit_0};
 
@@ -93,7 +90,7 @@ assign hit_datapath = {hit_1, hit_0};
 
 
 
-array #(.width(1))
+dcache_array #(.width(1))
 lru (
     .clk(clk),
     .rst(rst),
@@ -105,7 +102,7 @@ lru (
     .dataout(lru_output)
 );
 
-array #(.width(1))
+dcache_array #(.width(1))
 valid_array_0(
     .clk(clk),
     .rst(rst),
@@ -117,7 +114,7 @@ valid_array_0(
     .dataout(valid_out[0])
 );
 
-array #(.width(1))
+dcache_array #(.width(1))
 valid_array_1(
     .clk(clk),
     .rst(rst),
@@ -129,7 +126,7 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-array #(.width(1))
+dcache_array #(.width(1))
 dirty_array_0(
     .clk(clk),
     .rst(rst),
@@ -142,7 +139,7 @@ dirty_array_0(
 );
 
 
-array #(.width(1))
+dcache_array #(.width(1))
 dirty_array_1(
     .clk(clk),
     .rst(rst),
@@ -154,7 +151,7 @@ dirty_array_1(
     .dataout(dirty_out[1])
 );
 
-array #(.width(24))
+dcache_array #(.width(24))
 tag_array_0 (
     .clk(clk),
     .rst(rst),
@@ -166,7 +163,7 @@ tag_array_0 (
     .dataout(tag_output_0)
 );
 
-array  #(.width(24))
+dcache_array  #(.width(24))
 tag_array_1 (
     .clk(clk),
     .rst(rst),
@@ -178,7 +175,7 @@ tag_array_1 (
     .dataout(tag_output_1)
 );
 
-data_array data_array_0 (
+dcache_data_array data_array_0 (
     .clk(clk),
     .rst(rst),
     .read(1'b1),
@@ -189,7 +186,7 @@ data_array data_array_0 (
     .dataout(output_data_0)
 );
 
-data_array data_array_1 (
+dcache_data_array data_array_1 (
     .clk(clk),
     .rst(rst),
     .read(1'b1),
@@ -203,6 +200,10 @@ data_array data_array_1 (
 
 
 always_comb begin
+
+    pmem_wdata = 32'd0;
+    mem_rdata256 = 256'd0;
+    
     unique case (hit_datapath)
         
         //miss
@@ -211,6 +212,7 @@ always_comb begin
             unique case(lru_output) 
                 //first data
                 1'b0: begin
+                    
                     pmem_wdata = output_data_0;
                     /*case (mem_enable_sel)
                         1'b0: write_enable_0 = 32'd0;
@@ -274,9 +276,7 @@ always_comb begin
 
         
             
-        /*default: begin
-            
-        end*/
+        default: ;
         
 
     endcase
@@ -307,4 +307,4 @@ always_comb begin
         
     
 end
-endmodule : cache_datapath
+endmodule : dcache_datapath

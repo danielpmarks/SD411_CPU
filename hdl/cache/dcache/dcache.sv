@@ -72,11 +72,11 @@ logic [31:0] mem_byte_enable256;
 	
 logic mem_enable_sel;
 
-cache_control control (.*);
+dcache_control dcache_control (.*);
 
-cache_datapath datapath(.*);
+dcache_datapath dcache_datapath(.*);
 
-bus_adapter bus_adapter
+dcache_bus_adapter dcache_bus_adapter
 (
 .mem_wdata256,
 .mem_rdata256,
@@ -87,4 +87,4 @@ bus_adapter bus_adapter
 .address(mem_address)
 );
 
-endmodule : cache
+endmodule : dcache

@@ -1,0 +1,190 @@
+import rv32i_types::*;
+`define BAD_MUX_SEL $fatal("%0t %s %0d: Illegal mux select", $time, `__FILE__, `__LINE__)
+module forwarding_unit
+(
+    input regfilemux::regfilemux_sel_t MEM_WB_regfile_sel,
+    input regfilemux::regfilemux_sel_t EX_MEM_regfile_sel,
+    input logic [4:0] MEM_WB_rd,
+    input logic [4:0] EX_MEM_rd,
+    input logic [4:0] rs1, // reg addr from ID/EX stage
+    input logic [4:0] rs2, // reg addr from ID/EX stage
+    input logic [31:0] rs1_out,
+    input logic [31:0] rs2_out,
+    input logic [31:0] EX_MEM_alu_out,
+    input logic [31:0] EX_MEM_mem_out,
+    input logic [31:0] MEM_WB_alu_out,
+    input logic [31:0] MEM_WB_mem_out,
+    output logic [31:0] forward_mux1_out,
+    output logic [31:0] forward_mux2_out
+);
+logic MEM_WB_rd_rs1; // comparing result of MEM_WB_rd == rs1
+logic EX_MEM_rd_rs1;// comparing result of EX_MEM_rd == rs1
+logic MEM_WB_rd_rs2;// comparing result of MEM_WB_rd == rs2
+logic EX_MEM_rd_rs2;// comparing result of EX_MEM_rd == rs2
+logic [1:0] combine_rs1; // concatenation of MEM_WB_rd_rs1 and EX_MEM_rd_rs1
+logic [1:0] combine_rs2;// concatenation of MEM_WB_rd_rs2 and EX_MEM_rd_rs2
+logic [31:0] EX_MEM_true_mem_out; // masked mem_out in turns of lb, lbu, lhu, lh or lw.
+logic [31:0] MEM_WB_true_mem_out;
+always_comb begin : cmp
+    MEM_WB_rd_rs1 = 0;
+    EX_MEM_rd_rs1 = 0;
+    MEM_WB_rd_rs2 = 0;
+    EX_MEM_rd_rs2 = 0;
+    if (rs1 == MEM_WB_rd) begin
+        MEM_WB_rd_rs1 = 1;
+    end
+
+    if (rs1 == EX_MEM_rd) begin
+        MEM_WB_rd_rs1 = 0;
+        EX_MEM_rd_rs1 = 1;
+    end
+
+    if (rs2 == MEM_WB_rd) begin
+        MEM_WB_rd_rs2 = 1;
+    end
+
+    if (rs2 == EX_MEM_rd) begin
+        MEM_WB_rd_rs2 = 0;
+        EX_MEM_rd_rs2 = 1;
+    end
+end
+
+always_comb begin : MEM_WB_true_mem_out_mux
+    MEM_WB_true_mem_out = {32{0}};
+    unique case (MEM_WB_regfile_sel)
+        regfilemux::lw: MEM_WB_true_mem_out = MEM_WB_mem_out;
+        regfilemux::lb: begin 
+            unique case(MEM_WB_alu_out[1:0])
+                2'b11: MEM_WB_true_mem_out = {{24{MEM_WB_mem_out[31]}}, MEM_WB_mem_out[31:24]};
+                2'b10: MEM_WB_true_mem_out = {{24{MEM_WB_mem_out[23]}}, MEM_WB_mem_out[23:16]};
+                2'b01: MEM_WB_true_mem_out = {{24{MEM_WB_mem_out[15]}}, MEM_WB_mem_out[15:8]};
+                2'b00: MEM_WB_true_mem_out = {{24{MEM_WB_mem_out[7]}}, MEM_WB_mem_out[7:0]};
+                default: ;
+            endcase
+        end
+        regfilemux::lbu: begin 
+            unique case(MEM_WB_alu_out[1:0])
+                2'b11: MEM_WB_true_mem_out = {24'd0, MEM_WB_mem_out[31:24]};
+                2'b10: MEM_WB_true_mem_out = {24'd0, MEM_WB_mem_out[23:16]};
+                2'b01: MEM_WB_true_mem_out = {24'd0, MEM_WB_mem_out[15:8]};
+                2'b00: MEM_WB_true_mem_out = {24'd0, MEM_WB_mem_out[7:0]};
+                default: ;
+           endcase
+        end
+        regfilemux::lh: begin 
+            unique case(MEM_WB_alu_out[1])
+                1'b1: MEM_WB_true_mem_out = {{16{MEM_WB_mem_out[31]}}, MEM_WB_mem_out[31:16]};
+                1'b0: MEM_WB_true_mem_out = {{16{MEM_WB_mem_out[15]}}, MEM_WB_mem_out[15:0]}; 
+                default: ; 
+            endcase
+        end
+        regfilemux::lhu: begin 
+            unique case(MEM_WB_alu_out[1])
+                1'b1: MEM_WB_true_mem_out = {16'd0, MEM_WB_mem_out[31:16]};
+                1'b0: MEM_WB_true_mem_out = {16'd0, MEM_WB_mem_out[15:0]};  
+                default: ;
+            endcase 
+        end
+        default: MEM_WB_true_mem_out = {32{0}};
+    endcase
+end
+
+always_comb begin : EX_MEM_true_mem_out_mux
+    EX_MEM_true_mem_out = {32{0}};
+    unique case (regfilemux_sel)
+        regfilemux::lw: EX_MEM_true_mem_out = EX_MEM_mem_out;
+        regfilemux::lb: begin 
+            unique case(EX_MEM_alu_out[1:0])
+                2'b11: EX_MEM_true_mem_out = {{24{EX_MEM_mem_out[31]}}, EX_MEM_mem_out[31:24]};
+                2'b10: EX_MEM_true_mem_out = {{24{EX_MEM_mem_out[23]}}, EX_MEM_mem_out[23:16]};
+                2'b01: EX_MEM_true_mem_out = {{24{EX_MEM_mem_out[15]}}, EX_MEM_mem_out[15:8]};
+                2'b00: EX_MEM_true_mem_out = {{24{EX_MEM_mem_out[7]}}, EX_MEM_mem_out[7:0]};
+                default: ;
+            endcase
+        end
+        regfilemux::lbu: begin 
+            unique case(EX_MEM_alu_out[1:0])
+                2'b11: EX_MEM_true_mem_out = {24'd0, EX_MEM_mem_out[31:24]};
+                2'b10: EX_MEM_true_mem_out = {24'd0, EX_MEM_mem_out[23:16]};
+                2'b01: EX_MEM_true_mem_out = {24'd0, EX_MEM_mem_out[15:8]};
+                2'b00: EX_MEM_true_mem_out = {24'd0, EX_MEM_mem_out[7:0]};
+                default: ;
+           endcase
+        end
+        regfilemux::lh: begin 
+            unique case(EX_MEM_alu_out[1])
+                1'b1: EX_MEM_true_mem_out = {{16{EX_MEM_mem_out[31]}}, EX_MEM_mem_out[31:16]};
+                1'b0: EX_MEM_true_mem_out = {{16{EX_MEM_mem_out[15]}}, EX_MEM_mem_out[15:0]}; 
+                default: ; 
+            endcase
+        end
+        regfilemux::lhu: begin 
+            unique case(EX_MEM_alu_out[1])
+                1'b1: EX_MEM_true_mem_out = {16'd0, EX_MEM_mem_out[31:16]};
+                1'b0: EX_MEM_true_mem_out = {16'd0, EX_MEM_mem_out[15:0]};  
+                default: ;
+            endcase 
+        end
+        default: EX_MEM_true_mem_out = {32{0}};
+    endcase
+end
+
+always_comb begin : forward1_mux
+    combine_rs1 = {MEM_WB_rd_rs1, EX_MEM_rd_rs1};
+    forward_mux1_out = rs1_out;
+    unique case (combine_rs1)
+        2'b10: begin
+            // not sure if we need to consider cases other than load and alu instructions
+            case (MEM_WB_regfile_sel)
+                regfilemux::alu_out: forward_mux1_out = MEM_WB_alu_out;
+                regfilemux::lhu: forward_mux1_out = MEM_WB_true_mem_out;
+                regfilemux::lh: forward_mux1_out = MEM_WB_true_mem_out;
+                regfilemux::lbu: forward_mux1_out = MEM_WB_true_mem_out;
+                regfilemux::lb: forward_mux1_out = MEM_WB_true_mem_out;
+                regfilemux::lw: forward_mux1_out = MEM_WB_true_mem_out;
+            endcase
+        end
+        2'b01: begin
+            case (EXE_MEM_regfile_sel)
+                regfilemux::alu_out: forward_mux1_out = EX_MEM_alu_out;
+                regfilemux::lhu: forward_mux1_out = EX_MEM_true_mem_out;
+                regfilemux::lh: forward_mux1_out = EX_MEM_true_mem_out;
+                regfilemux::lbu: forward_mux1_out = EX_MEM_true_mem_out;
+                regfilemux::lb: forward_mux1_out = EX_MEM_true_mem_out;
+                regfilemux::lw: forward_mux1_out = EX_MEM_true_mem_out;
+            endcase
+        end
+        2'b00: forward_mux1_out = rs1_out;
+        default: `BAD_MUX_SEL;
+    endcase
+end
+
+always_comb begin : forward2_mux
+    combine_rs2 = {MEM_WB_rd_rs2, EX_MEM_rd_rs2};
+    forward_mux2_out = rs2_out;
+    unique case (combine_rs2)
+        2'b10: begin
+            case (MEM_WB_regfile_sel)
+                regfilemux::alu_out: forward_mux2_out = MEM_WB_alu_out;
+                regfilemux::lhu: forward_mux2_out = MEM_WB_true_mem_out;
+                regfilemux::lh: forward_mux2_out = MEM_WB_true_mem_out;
+                regfilemux::lbu: forward_mux2_out = MEM_WB_true_mem_out;
+                regfilemux::lb: forward_mux2_out = MEM_WB_true_mem_out;
+                regfilemux::lw: forward_mux2_out = MEM_WB_true_mem_out;
+            endcase
+        end
+        2'b01: begin
+            case (EXE_MEM_regfile_sel)
+                regfilemux::alu_out: forward_mux2_out = EXE_MEM_alu_out;
+                regfilemux::lhu: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lh: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lbu: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lb: forward_mux2_out = EXE_MEM_true_mem_out;
+                regfilemux::lw: forward_mux2_out = EXE_MEM_true_mem_out;
+            endcase
+        end
+        2'b00: forward_mux2_out = rs2_out;
+        default: `BAD_MUX_SEL;
+    endcase
+end
+endmodule : forwarding_unit

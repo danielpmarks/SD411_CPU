@@ -58,4 +58,4 @@ begin
     end
 end
 
-endmodule : dcache_data_array
+endmodule : data_array

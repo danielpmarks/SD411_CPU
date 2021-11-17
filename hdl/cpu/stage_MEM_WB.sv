@@ -19,13 +19,22 @@ module MEM_WB(
     output logic [31:0] alu_out,
     output logic [31:0] mdr_out,
     output logic br_en_out,
-    output [31:0] u_imm
+    output [31:0] u_imm,
+
+    input monitor_t monitor_in,
+    output monitor_t monitor_out,
+
+    output logic flush
 );
 
 rv32i_control_word control_word;
 logic [31:0] alu, mdr;
 logic br_en;
 packed_imm imm;
+monitor_t monitor;
+
+assign monitor_out = monitor;
+assign flush = ~monitor.commit;
 
 assign rd = control_word.rd;
 assign load_regfile = control_word.load_regfile;
@@ -73,6 +82,34 @@ begin
         mdr <= mdr_in;
         br_en <= br_en_in;
         imm <= imm_in;
+
+        // Load signals from monitor_in
+        monitor.commit <= monitor_in.commit;
+        monitor.pc_rdata <= monitor_in.pc_rdata;
+        monitor.pc_wdata <= monitor_in.pc_wdata;
+        monitor.instruction <= monitor_in.instruction;
+        monitor.trap <= monitor_in.trap;
+        monitor.rs1_addr <= monitor_in.rs1_addr;
+        monitor.rs2_addr <= monitor_in.rs2_addr;
+        monitor.rs1_rdata <= monitor_in.rs1_rdata;
+        monitor.rs2_rdata <= monitor_in.rs2_rdata;
+        monitor.mem_addr <= monitor_in.mem_addr;
+        monitor.mem_wdata <= monitor_in.mem_wdata;
+        monitor.mem_wmask <= monitor_in.mem_wmask;
+        
+        
+        //Load in new monitor signals
+        monitor.rd_addr <= control_word_in.rd;
+        if(control_word_in.opcode == op_load) begin
+            monitor.mem_rdata <= mdr_in;
+            unique case(load_funct3_t'(control_word_in.funct3))
+                lw: monitor.mem_rmask <= 4'b1111;
+                lh: monitor.mem_rmask <= 4'b0011 << {alu_in[1], 1'b0};
+                lb: monitor.mem_rmask <= 4'b0001 << alu_in[1:0];
+					 default: monitor.mem_rmask <= 4'b1111;
+            endcase
+        end
+
     end
     else
     begin
