@@ -8,6 +8,7 @@ module local_branch_table #(parameter num_bits = 5)
     input correct,
     input [31:0] current_pc,
     input [31:0] pc_update,
+    input prediction_t previous_prediction,
     input [31:0] calculated_target,
     output prediction_t prediction,
     output logic [31:0] pc_prediction
@@ -49,16 +50,16 @@ btb_array #(32) targets(
 );
 
 always_comb begin
-    new_prediction = prediction;
+    new_prediction = previous_prediction;
     if(correct) begin
-        unique case(prediction)
-            snt, st: new_prediction = prediction;
+        unique case(previous_prediction)
+            snt, st: new_prediction = previous_prediction;
             wnt: new_prediction = snt;
             wt: new_prediction = st;
         endcase
     end
     else begin
-        unique case(prediction)
+        unique case(previous_prediction)
             snt, wt: new_prediction = wnt;
             st, wnt: new_prediction = wt;
         endcase
