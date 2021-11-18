@@ -72,7 +72,7 @@ logic br_en, branch_taken;
 logic flush;
 logic correct_prediction, correct_target;
 
-assign flush = monitors[1].commit && (!correct_prediction || (correct_prediction && (control_words[1].prediction == st || control_words[1].prediction == wt) && !correct_target));  
+assign flush = (control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) && monitors[1].commit && (!correct_prediction || (correct_prediction && (control_words[1].prediction == st || control_words[1].prediction == wt) && !correct_target));  
 
 /* EX/MEM Signals */
 logic load_ex_mem;
@@ -106,10 +106,11 @@ pc_register pc(.*,
 
 local_branch_table branch_predictor(
     .*,
-    .update(control_words[1].opcode == op_br),
+    .update(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr),
     .correct(correct_prediction),
     .current_pc(pc_out),
     .pc_update(control_words[1].pc),
+    .previous_prediction(control_words[1].prediction),
     .calculated_target(alu_out),
     .prediction(prediction),
     .pc_prediction(target_pc)
@@ -117,18 +118,24 @@ local_branch_table branch_predictor(
 
 always_comb begin
     if(flush) begin
-        unique case(control_words[1].prediction)
-            st, wt: pc_in = control_words[1].pc + 4;
-            snt, wnt: pc_in = control_words[1].opcode == op_jalr ? {alu_out[31:1],1'b0} : alu_out;
-        endcase
+        if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
+            pc_in = alu_out;
+        end 
+        else if(control_words[1].opcode == op_jalr) begin 
+            pc_in = {alu_out[31:1],1'b0};
+        end else begin 
+            pc_in = control_words[1].pc + 4;
+        end
     end
     else begin
         pc_in = pc_out + 4;
-        if(rv32i_opcode'(ir_in[6:0]) == op_br || rv32i_opcode'(ir_in[6:0]) == op_jal || rv32i_opcode'(ir_in[6:0]) == op_jalr) begin
+        if(rv32i_opcode'(ir_in[6:0]) == op_br) begin
             unique case(prediction)
                 st, wt: pc_in = target_pc;
                 snt, wnt: pc_in = pc_out + 4;
             endcase
+        end else if(rv32i_opcode'(ir_in[6:0]) == op_jal || rv32i_opcode'(ir_in[6:0]) == op_jalr) begin
+            pc_in = target_pc;
         end
     end
 end
@@ -233,6 +240,19 @@ ID_EX stage_id_ex(.*,
 alu ALU(.a(alumux1_out), .b(alumux2_out), .f(alu_out), .aluop(aluop));
 cmp CMP(.a(forward_mux1_out), .b(cmpmux_out), .cmpop(cmpop), .br_en(br_en));
 
+int branch_hits;
+
+always_ff @(posedge clk) begin
+    if(rst)
+        branch_hits <= 0;
+    else if(control_words[1].opcode == op_br && correct_prediction && correct_target) 
+        branch_hits <= branch_hits + 1;
+    else if((control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) && correct_target)
+        branch_hits <= branch_hits + 1;
+    else
+        branch_hits <= branch_hits;
+end
+
 /* Correct prediction logic */
 always_comb begin
 	correct_target = 1'b1;
@@ -242,6 +262,7 @@ always_comb begin
         correct_target = control_words[1].pc_target == {alu_out[31:1],1'b0};
 
     branch_taken = control_words[1].opcode == op_br ? br_en : control_words[1].opcode == op_jal | control_words[1].opcode == op_jalr;
+    correct_prediction = 1'b1;
     unique case(control_words[1].prediction)
         st, wt: correct_prediction = branch_taken;
         snt, wnt: correct_prediction = !branch_taken;
@@ -346,7 +367,7 @@ logic flush_mem_wb;
 
 MEM_WB stage_mem_wb(
     .*,
-	 .load(load_mem_wb),
+	.load(load_mem_wb),
     .control_word_in(control_words[2]),
     .alu_in(alu_out_mem),
     .mdr_in(data_rdata),

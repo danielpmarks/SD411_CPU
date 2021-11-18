@@ -66,15 +66,15 @@ icache instruction_cache(
     .pmem_resp(pmem_resp_c_i)
 );
 
-dcache data_cache(
+cache data_cache(
     .*,
     .mem_read(data_read),
     .mem_write(data_write),
     .mem_address(data_addr),
-    .mem_rdata(data_rdata),
-    .mem_wdata(data_wdata),
+    .mem_rdata_cpu(data_rdata),
+    .mem_wdata_cpu(data_wdata),
     .mem_resp(data_resp),
-    .mem_byte_enable(data_mbe),
+    .mem_byte_enable_cpu(data_mbe),
 
     .pmem_address(pmem_address_c_d),
     .pmem_read(pmem_read_c_d),

@@ -43,7 +43,7 @@ assign word.alumux2_sel = alumux2_sel;
 assign word.cmpmux_sel = cmpmux_sel;
 assign word.mem_read = mem_read;
 assign word.mem_write = mem_write;
-assign word.rd = opcode == op_store ? 0 : rd;
+assign word.rd = opcode == op_store || opcode == op_br ? 0 : rd;
 assign word.funct3 = funct3;
 assign word.pc = PC;
 assign word.funct7 = funct7;

@@ -86,15 +86,6 @@ always_ff@(posedge clk) begin
         control_word.funct7 <= 0;
         control_word.pc <= 0;
     end
-    else if (flush) begin
-        control_word.opcode <= op_imm;
-        control_word.aluop <= alu_add;
-        control_word.rd <= '0;
-        rs1 <= '0;
-        rs2 <= '0;
-
-        monitor.commit <= 0;
-    end
     else if(load) begin
         rs1 <= rs1_in;
         rs2 <= rs2_in;
@@ -114,8 +105,15 @@ always_ff@(posedge clk) begin
         monitor.rs1_addr <= rs1_addr_in;
         monitor.rs2_addr <= rs2_addr_in;
         
+        if (flush) begin
+            control_word.opcode <= op_imm;
+            control_word.aluop <= alu_add;
+            control_word.rd <= '0;
+            rs1 <= '0;
+            rs2 <= '0;
 
-
+            monitor.commit <= 0;
+        end
     end
     else begin 
         rs1 <= rs1;
