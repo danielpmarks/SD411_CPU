@@ -34,11 +34,13 @@ assign stall = !inst_resp || (monitors[2].commit && (data_read || data_write) &&
 logic load_pc;
 logic [31:0] pc_in, pc_out;
 logic [31:0] ir_out;
-prediction_t prediction;
-logic [31:0] target_pc;
+prediction_t global_prediction, local_prediction, prediction;
+logic [31:0] global_target_pc, local_target_pc, target_pc;
 logic [31:0] ir_in;
 logic commit_if;
 logic [31:0] target_pc_id;
+logic [3:0] past_branches;
+logic [1:0] branch_table_select;
 
 /* IF/ID Signals */
 logic load_if_id;
@@ -104,7 +106,7 @@ pc_register pc(.*,
     .out(pc_out)
 );
 
-local_branch_table branch_predictor(
+local_branch_table #(.num_bits(5)) local_branch_predictor(
     .*,
     .update(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr),
     .correct(correct_prediction),
@@ -112,11 +114,29 @@ local_branch_table branch_predictor(
     .pc_update(control_words[1].pc),
     .previous_prediction(control_words[1].prediction),
     .calculated_target(alu_out),
-    .prediction(prediction),
-    .pc_prediction(target_pc)
+    .prediction(local_prediction),
+    .pc_prediction(local_target_pc)
+);
+
+
+global_branch_table #(.num_bits(5),.past_branch_bits(4))  global_branch_predictor(
+    .*,
+    .update(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr),
+    .correct(correct_prediction),
+    .current_pc(pc_out),
+    .past_branches(past_branches),
+    .pc_update(control_words[1].pc),
+    .previous_prediction(control_words[1].prediction),
+    .calculated_target(alu_out),
+    .prediction(global_prediction),
+    .pc_prediction(global_target_pc)
 );
 
 always_comb begin
+    target_pc = branch_table_select[1] ? global_target_pc : local_target_pc;
+    prediction = branch_table_select[1] ? global_prediction : local_prediction;
+
+
     if(flush) begin
         if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
             pc_in = alu_out;
@@ -138,6 +158,8 @@ always_comb begin
             pc_in = target_pc;
         end
     end
+
+    
 end
 
 
@@ -245,12 +267,33 @@ int branch_hits;
 always_ff @(posedge clk) begin
     if(rst)
         branch_hits <= 0;
-    else if(control_words[1].opcode == op_br && correct_prediction && correct_target) 
-        branch_hits <= branch_hits + 1;
-    else if((control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) && correct_target)
+    else if(monitors[1].commit && ((control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) && !flush)) 
         branch_hits <= branch_hits + 1;
     else
         branch_hits <= branch_hits;
+
+    if(rst)
+        past_branches <= 4'd0;
+    else if(monitors[1].commit && control_words[1].opcode == op_br)
+        past_branches <= {past_branches[2:0], br_en};
+    else 
+        past_branches <= past_branches;
+
+    if(rst)
+        branch_table_select <= 2'd0;
+    else if(flush) begin
+        unique case(branch_table_select)
+            2'b00, 2'b10: branch_table_select <= 2'b01;
+            2'b01, 2'b11: branch_table_select <= 2'b10;
+        endcase
+    end else if(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) begin
+        unique case(branch_table_select)
+            2'b01: branch_table_select <= 2'b00;
+            2'b10: branch_table_select <= 2'b11;
+            default: branch_table_select <= branch_table_select;
+        endcase
+    end else 
+        branch_table_select <= branch_table_select;
 end
 
 /* Correct prediction logic */
@@ -268,6 +311,7 @@ always_comb begin
         snt, wnt: correct_prediction = !branch_taken;
         default: correct_prediction = 1'b1;
     endcase
+
 end
 
 /* MUXES */

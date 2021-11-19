@@ -1,11 +1,12 @@
 import rv32i_types::*;
 
-module local_branch_table #(parameter num_bits = 5)
+module global_branch_table #(parameter num_bits = 5, parameter past_branch_bits = 2)
 (
     input clk,
     input rst,
     input update,
     input correct,
+    input [past_branch_bits-1:0] past_branches,
     input [31:0] current_pc,
     input [31:0] pc_update,
     input prediction_t previous_prediction,
@@ -22,29 +23,29 @@ logic [1:0] prediction_out;
 assign prediction = prediction_t'(prediction_out);
 assign pc_prediction = valid_out ? target : current_pc + 4;
 
-btb_array #(.width(1),.bits(num_bits)) valid(
+btb_array #(.width(1),.bits(num_bits + past_branch_bits)) valid(
     .*,
     .load(update),
-    .rindex(current_pc[num_bits+1:2]),
-    .windex(pc_update[num_bits+1:2]),
+    .rindex({past_branches,current_pc[num_bits+1:2]}),
+    .windex({past_branches,pc_update[num_bits+1:2]}),
     .datain(1'b1),
     .dataout(valid_out)
 );
 
-btb_array #(.width(2),.bits(num_bits)) predictions(
+btb_array #(.width(2),.bits(num_bits + past_branch_bits)) predictions(
     .*,
     .load(update),
-    .rindex(current_pc[num_bits+1:2]),
-    .windex(pc_update[num_bits+1:2]),
+    .rindex({past_branches,current_pc[num_bits+1:2]}),
+    .windex({past_branches,pc_update[num_bits+1:2]}),
     .datain(new_prediction),
     .dataout(prediction_out)
 );
 
-btb_array #(.width(32),.bits(num_bits)) targets(
+btb_array #(.width(32),.bits(num_bits + past_branch_bits)) targets(
     .*,
     .load(update),
-    .rindex(current_pc[num_bits+1:2]),
-    .windex(pc_update[num_bits+1:2]),
+    .rindex({past_branches,current_pc[num_bits+1:2]}),
+    .windex({past_branches,pc_update[num_bits+1:2]}),
     .datain(calculated_target),
     .dataout(target)
 );
