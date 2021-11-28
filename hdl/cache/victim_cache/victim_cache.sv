@@ -36,7 +36,7 @@ output logic pmem_write; // write request to main memory
 output logic [31:0] mem_address;
 output logic [width-1:0] pmem_write_data; // write_data
 
-
+int idx;
 int write_back_index;
 logic [width-1:0] write_back_data;
 
@@ -150,7 +150,7 @@ endfunction
 get the index of lru data according to the current lru_arr
 */
 function int get_iru_index();
-    int idx = 0;
+    idx = 0;
     if (iru_arr[0]) begin
         idx = idx + 8;
     end

@@ -330,9 +330,7 @@ always_comb begin
         //hit_0
         4'b0001: begin
             mem_rdata256 = output_data_0;
-            
         end
-
         //hit_1
         4'b0010: begin
             mem_rdata256 = output_data_1;
@@ -343,7 +341,7 @@ always_comb begin
             mem_rdata256 = output_data_2;
         end
         
-        //hit_2
+        //hit_3
         4'b1000: begin
 
             mem_rdata256 = output_data_3;
@@ -351,8 +349,6 @@ always_comb begin
         end
             
         default: ;
-        
-
     endcase
 
     
