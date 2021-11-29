@@ -83,11 +83,14 @@ regfilemux::regfilemux_sel_t regfilemux_sel;
 logic [31:0] regfilemux_out;
 
 /***************************** INSTRUCTION FETCH STAGE *****************************/
-
+logic [31:0] inst_addr_in;
 
 assign load_pc = !stall;
-assign inst_addr = pc_out;
-assign inst_read = 1'b1;
+
+
+assign inst_addr = inst_addr_in;
+//assign inst_read = 1'b1;
+assign inst_read = !stall;
 
 pc_register pc(.*,
     .load(load_pc),
@@ -98,12 +101,15 @@ pc_register pc(.*,
 always_comb begin
     if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
         pc_in = alu_out;
+        inst_addr_in = alu_out;
     end
     else if(control_words[1].opcode == op_jalr) begin
         pc_in = {alu_out[31:1], 1'b0};
+        inst_addr_in = {alu_out[31:1], 1'b0};
     end
     else begin
         pc_in = pc_out + 4;
+        inst_addr_in = pc_out;
     end
 end
 
@@ -234,7 +240,8 @@ end
 /***************************** EX/MEM BUFFER ********************************/
 
 assign load_ex_mem = !stall;
-assign data_addr = {mar_out[31:2], 2'b00};
+//assign data_addr = {mar_out[31:2], 2'b00};
+assign data_addr = {alu_out[31:2], 2'b00};
 logic flush_ex_mem;
 
 EX_MEM stage_ex_mem(
@@ -272,20 +279,32 @@ always_comb begin
                 data_mbe = 4'b1111;
             end
             sh: begin
-                unique case(mar_out[1])
+                /*unique case(mar_out[1])
+                    1'b1: data_wdata = mem_wdata << 16;
+                    1'b0: data_wdata = mem_wdata;
+                endcase*/
+                unique case(alu_out[1])
                     1'b1: data_wdata = mem_wdata << 16;
                     1'b0: data_wdata = mem_wdata;
                 endcase
-                data_mbe = 4'b0011 << (mar_out[1] << 1);
+                //data_mbe = 4'b0011 << (mar_out[1] << 1);
+                data_mbe = 4'b0011 << (alu_out[1] << 1);
             end
             sb: begin
-                unique case(mar_out[1:0])
+                /*unique case(mar_out[1:0])
                     2'b11: data_wdata = mem_wdata << 24;
                     2'b01: data_wdata = mem_wdata << 16;
                     2'b10: data_wdata = mem_wdata << 8;
                     2'b00: data_wdata = mem_wdata;
                 endcase
-                data_mbe = 4'b0001 << mar_out[1:0];
+                data_mbe = 4'b0001 << mar_out[1:0];*/
+                unique case(alu_out[1:0])
+                    2'b11: data_wdata = mem_wdata << 24;
+                    2'b01: data_wdata = mem_wdata << 16;
+                    2'b10: data_wdata = mem_wdata << 8;
+                    2'b00: data_wdata = mem_wdata;
+                endcase
+                data_mbe = 4'b0001 << alu_out[1:0];
             end
             default: ;
         endcase

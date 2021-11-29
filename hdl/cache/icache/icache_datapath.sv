@@ -62,21 +62,21 @@ module icache_datapath #(
 );
 
 //internal signal
-logic [23:0] input_tag;
-logic [2:0] input_index;
+logic [21:0] input_tag;
+logic [4:0] input_index;
 logic hit_0, hit_1;
 //logic [1:0] hit;
 //logic [255:0] data_array_in;
 logic [255:0] output_data_0;
 logic [255:0] output_data_1;
-logic [23:0] tag_output_0;
-logic [23:0] tag_output_1;
+logic [21:0] tag_output_0;
+logic [21:0] tag_output_1;
 //logic [31:0] write_enable_0;
 //logic [31:0] write_enable_1;
 
 //breaking down mem_address
-assign input_tag = mem_address[31:8];
-assign input_index = mem_address[7:5];
+assign input_tag = mem_address[31:10];
+assign input_index = mem_address[9:5];
 
 //hit
 assign hit_0 = mem_read && valid_out[0] && (tag_output_0 == input_tag);
@@ -127,32 +127,42 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-/*icache_array #(.width(1))
-dirty_array_0(
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_dirty[0]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(set_dirty[0]),
-    .dataout(dirty_out[0])
-);*/
-
-
-/*icache_array #(.width(1))
-dirty_array_1(
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_dirty[1]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(set_dirty[1]),
-    .dataout(dirty_out[1])
+tag_array_22_nox tag_array_0(
+    .address(input_index),
+	.clock(clk),
+	.data(input_tag),
+    .rden(1'b1),
+	.wren(load_tag[0]),
+	.q(tag_output_0)
 );
-*/
-icache_array #(.width(24))
+
+tag_array_22_nox tag_array_1(
+    .address(input_index),
+	.clock(clk),
+	.data(input_tag),
+    .rden(1'b1),
+	.wren(load_tag[1]),
+	.q(tag_output_1)
+);
+
+data_array_64 data_array_0 (
+    .address(input_index),
+	.byteena(write_enable_0),
+    .clock(clk),
+	.data(pmem_rdata),
+	.wren(1'b1),
+	.q(output_data_0)
+);
+
+data_array_64 data_array_1 (
+    .address(input_index),
+	.byteena(write_enable_1),
+    .clock(clk),
+	.data(pmem_rdata),
+	.wren(1'b1),
+	.q(output_data_1)
+);
+/*icache_array #(.width(24))
 tag_array_0 (
     .clk(clk),
     .rst(rst),
@@ -174,25 +184,26 @@ tag_array_1 (
     .windex(input_index),
     .datain(input_tag),
     .dataout(tag_output_1)
-);
+);*/
 
-icache_data_array data_array_0 (
+/*icache_data_array data_array_0 (
     .clk(clk),
     .load(write_enable_0),
     .rindex(input_index),
     .windex(input_index),
     .datain(pmem_rdata),
     .dataout(output_data_0)
-);
+);*/
 
-icache_data_array data_array_1 (
+
+/*icache_data_array data_array_1 (
     .clk(clk),
     .load(write_enable_1),
     .rindex(input_index),
     .windex(input_index),
     .datain(pmem_rdata),
     .dataout(output_data_1)
-);
+);*/
 
 
 

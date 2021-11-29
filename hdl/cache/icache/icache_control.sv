@@ -39,6 +39,7 @@ enum int unsigned {
     /* List of states */
 	//idle,
     hit,
+    return_data,
     //write_back,
     write_cache
 } state, next_states;
@@ -77,8 +78,6 @@ begin : state_actions
             if (hit_datapath == 0) begin
                 //set lru to be the other one
                 set_lru = ~lru_output;
-                
-                
                 /*if (dirty_out[lru_output]) begin
                     //mem_enable_sel = 1'b1;
                     set_dirty[lru_output] = 0;
@@ -90,14 +89,12 @@ begin : state_actions
             if (hit_datapath == 2'b01) begin
                 //first data
                 set_lru = 1;
-                
                 if (mem_read) begin
                     //mem_enable_sel = 1'b0;
                     write_enable_0 = 1'b0;
-                    mem_resp = 1'b1;
+                    //mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
-
                 /*else if (mem_write) begin
                     mem_resp = 1'b1;
                     //set the first dirty
@@ -118,7 +115,7 @@ begin : state_actions
                 if (mem_read) begin
                     //mem_enable_sel = 1'b0;
                     write_enable_1 = 1'b0;
-                    mem_resp = 1'b1;
+                    //mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
                 /*else if (mem_write) begin
@@ -140,6 +137,9 @@ begin : state_actions
             pmem_write = 1'b1;
             //if (lru_output)
         end*/
+        return_data:begin
+            mem_resp = 1'b1;
+        end
 
         write_cache: begin
             pmem_read = 1'b1;
@@ -152,7 +152,6 @@ begin : state_actions
             end
             set_valid[lru_output] = 1'b1;
             load_valid[lru_output] = 1'b1;
-            
             //pmem_write = 1'b0;
             if (pmem_resp) begin
                 //pmem_write = 1'b0;
@@ -187,7 +186,7 @@ begin : next_state_logic
                 next_states = write_cache;
             end
             else begin
-                next_states = hit;
+                next_states = return_data;
             end
         end
 
@@ -195,9 +194,12 @@ begin : next_state_logic
             if (pmem_resp) next_states = write_cache;
             else next_states = write_back;
         end*/
+        return_data: begin
+            next_states = hit;
+        end
 
         write_cache: begin
-            if (pmem_resp) next_states = hit;
+            if (pmem_resp) next_states = return_data;
             else next_states = write_cache;
         end
 		
