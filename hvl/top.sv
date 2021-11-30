@@ -60,7 +60,7 @@ assign rvfi.mem_wdata = dut.datapath.monitors[3].mem_wdata;
 /********************* Assign Shadow Memory Signals Here *********************/
 // This section not required until CP2
 assign itf.inst_read = dut.instruction_cache.mem_read;
-assign itf.inst_addr = dut.instruction_cache.mem_address;
+assign itf.inst_addr = dut.instruction_cache.req_addr;
 assign itf.inst_resp = dut.instruction_cache.mem_resp;
 assign itf.inst_rdata = dut.instruction_cache.mem_rdata;
 
