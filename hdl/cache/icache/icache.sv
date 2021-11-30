@@ -75,9 +75,18 @@ logic [255:0] mem_rdata256;
 	
 logic mem_enable_sel;
 
+logic [31:0] req_addr;
+
+always_ff@(posedge clk) begin
+    req_addr <= mem_address;
+end
+
 icache_control control (.*);
 
-icache_datapath datapath(.*);
+icache_datapath datapath(.*,
+    .mem_address(req_addr),
+    .index_in(mem_address[9:5])    
+);
 
 icache_bus_adapter bus_adapter
 (
@@ -87,7 +96,7 @@ icache_bus_adapter bus_adapter
 .mem_rdata,
 //.mem_byte_enable,
 //.mem_byte_enable256,
-.address(mem_address)
+.address(req_addr)
 );
 
 endmodule : icache

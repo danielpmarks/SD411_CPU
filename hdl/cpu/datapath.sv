@@ -99,9 +99,9 @@ logic [31:0] inst_addr_in;
 assign load_pc = !stall;
 
 
-assign inst_addr = inst_addr_in;
-//assign inst_read = 1'b1;
-assign inst_read = !stall;
+assign inst_addr = inst_resp && !stall ? pc_in : pc_out;
+assign inst_read = 1'b1;
+//assign inst_read = !stall;
 
 pc_register pc(.*,
     .load(load_pc),
@@ -136,7 +136,6 @@ global_branch_table #(.num_bits(5),.past_branch_bits(4))  global_branch_predicto
 );
 
 always_comb begin
-<<<<<<< HEAD
     target_pc = branch_table_select[1] ? global_target_pc : local_target_pc;
     prediction = branch_table_select[1] ? global_prediction : local_prediction;
 
@@ -161,19 +160,6 @@ always_comb begin
         end else if(rv32i_opcode'(ir_in[6:0]) == op_jal || rv32i_opcode'(ir_in[6:0]) == op_jalr) begin
             pc_in = target_pc;
         end
-=======
-    if((control_words[1].opcode == op_br && br_en) || control_words[1].opcode == op_jal) begin
-        pc_in = alu_out;
-        inst_addr_in = alu_out;
-    end
-    else if(control_words[1].opcode == op_jalr) begin
-        pc_in = {alu_out[31:1], 1'b0};
-        inst_addr_in = {alu_out[31:1], 1'b0};
-    end
-    else begin
-        pc_in = pc_out + 4;
-        inst_addr_in = pc_out;
->>>>>>> 6e29e7c9afee30f574c68f3b8206c9fb9ee9eb7c
     end
 
     
@@ -364,7 +350,7 @@ end
 
 assign load_ex_mem = !stall;
 //assign data_addr = {mar_out[31:2], 2'b00};
-assign data_addr = {alu_out[31:2], 2'b00};
+assign data_addr = {alu_out_mem[31:2], 2'b00};
 logic flush_ex_mem;
 
 EX_MEM stage_ex_mem(

@@ -1,7 +1,7 @@
 /* A register array to be used for tag arrays, LRU array, etc. */
 
 module icache_array #(
-    parameter s_index = 3,
+    parameter s_index = 5,
     parameter width = 1
 )
 (

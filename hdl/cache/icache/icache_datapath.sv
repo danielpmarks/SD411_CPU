@@ -25,10 +25,6 @@ module icache_datapath #(
     //lru input
     input logic set_lru,
     input logic load_lru,
-
-    //dirty input
-    /*input logic[1:0] load_dirty, 
-    input logic[1:0] set_dirty, */
     
     //valid input
     input logic[1:0] load_valid, 
@@ -43,21 +39,17 @@ module icache_datapath #(
     //output to control
     output logic lru_output,
     output logic[1:0] valid_out,
-    //output logic[1:0] dirty_out,
         
     /* Signals between cache and CPU */
-    //input logic mem_write,
     input logic mem_read,
     input logic [31:0] mem_address,
+    input logic [4:0] index_in,
     
     /* Signals between cache and main memory */
     output logic [31:0] pmem_address,
-    //output logic [255:0] pmem_wdata,
     input logic [255:0] pmem_rdata,
     
     /* Signals between cache and bus adapter */
-    //input logic [31:0] mem_byte_enable256,
-    //input logic [255:0] mem_wdata256,
     output logic [255:0] mem_rdata256
 );
 
@@ -65,18 +57,14 @@ module icache_datapath #(
 logic [21:0] input_tag;
 logic [4:0] input_index;
 logic hit_0, hit_1;
-//logic [1:0] hit;
-//logic [255:0] data_array_in;
 logic [255:0] output_data_0;
 logic [255:0] output_data_1;
 logic [21:0] tag_output_0;
 logic [21:0] tag_output_1;
-//logic [31:0] write_enable_0;
-//logic [31:0] write_enable_1;
 
 //breaking down mem_address
-assign input_tag = mem_address[31:11];
-assign input_index = mem_address[10:5];
+assign input_tag = mem_address[31:10];
+assign input_index = index_in;
 
 //hit
 assign hit_0 = mem_read && valid_out[0] && (tag_output_0 == input_tag);

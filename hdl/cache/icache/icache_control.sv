@@ -128,7 +128,7 @@ begin : state_actions
                 set_valid[lru_output] = 1'b1;
                 load_valid[lru_output] = 1'b1;
                 load_tag[lru_output] = 1'b1;
-                mem_resp = 1'b1;
+                
                 //set lru to the opposite way at the end of the write
                 //set_lru = ~lru_output
                 load_lru = 1'b1;
