@@ -1,6 +1,8 @@
 /* MODIFY. The cache controller. It is a state machine
 that controls the behavior of the cache. */
 
+
+
 module L2cache_control (
     input logic mem_read,
     input logic mem_write,
@@ -21,9 +23,6 @@ module L2cache_control (
     //tag control
     output logic[3:0] load_tag,
 
-    //data control
-    output logic data_array_select,
-
     //output to control
     input logic [2:0] lru_output,
     input logic[3:0] valid_out,
@@ -42,9 +41,8 @@ module L2cache_control (
     input logic [31:0] mem_byte_enable256
     
 );
-
+int index;
 int translated_index;
-
 enum int unsigned {
     /* List of states */
 	
@@ -61,10 +59,10 @@ function void set_defaults();
     load_valid = 0;
     set_valid = 0;
     load_tag = 0;
-    data_array_select = 0;
     pmem_read = 0;
     pmem_write = 0;
-    mem_resp = 0;	
+    mem_resp = 0;
+    index = 0;
     mem_enable_sel = 0;
     write_enable_0 = 0;
     write_enable_1 = 0;
@@ -72,66 +70,63 @@ function void set_defaults();
     write_enable_3 = 0;
 endfunction
 
-function void set_new_lru(index);
-    set_lru = lru_output;
-    if (index <= 1) begin
-        set_lru[2] = 1;
-        if (index == 1) begin
-            set_lru[1] = 0
-        end
-        else begin
-            set_lru[1] = 1
-        end
-    end
-    else begin
-        set_lru[2] = 0;
-        if (index == 3) begin
-            set_lru[0] = 0
-        end
-        else begin
-            set_lru[0] = 1
-        end
-    end
-endfunction
 
-function int pseudo_iru_translator(logic [2:0] pseudo_lru);
-    case (pseudo_lru)
-        3'b000: return 0;
-        3'b010: return 1;
-        3'b001: return 0;
-        3'b011: return 1;
-        3'b100: return 2;
-        3'b101: return 3;
-        3'b110: return 2;
-        3'b111: return 3;
+always_comb
+begin : current_lru_index
+    case (lru_output)
+        3'b000: translated_index = 0;
+        3'b010: translated_index = 1;
+        3'b001: translated_index = 0;
+        3'b011: translated_index = 1;
+        3'b100: translated_index = 2;
+        3'b101: translated_index = 3;
+        3'b110: translated_index = 2;
+        3'b111: translated_index = 3;
     endcase
-endfunction
-
+end
 always_comb
 begin : state_actions
     /* Default output assignments */
     set_defaults();
-    translated_index = pseudo_iru_translator(lru_output);
     /* Actions for each state */
-
+    set_lru = lru_output;
     unique case (state)
         hit: begin
             //miss
             if (mem_read | mem_write) begin
                 if (hit_datapath == 0) begin
                     //set lru to be the other one
-                    set_new_lru(translated_index);
+                    case (translated_index)
+                        0: begin
+                            set_lru[2] = 1'b1;
+                            set_lru[1] = 1'b1;
+                        end
+                        1:begin
+                            set_lru[2] = 1'b1;
+                            set_lru[1] = 1'b0;
+                        end
+                        2:begin
+                            set_lru[2] = 1'b0;
+                            set_lru[0] = 1'b1;
+                        end
+                        3:begin
+                            set_lru[2] = 1'b0;
+                            set_lru[0] = 1'b0;
+                        end
+                        default: ;
+                    endcase
                     if (dirty_out[translated_index]) begin
                         //mem_enable_sel = 1'b1;
-                        set_dirty[translated_index] = 0;
-                        load_dirty[translated_index] = 1;
+                        set_dirty[translated_index] = 1'b0;
+                        load_dirty[translated_index] = 1'b1;
                     end
                 end
 
                 //hit first way
                 if (hit_datapath == 4'b0001) begin
                     //first data
-                    set_new_lru(0);
+                    set_lru[2] = 1'b1;
+                    set_lru[1] = 1'b1;
                     
                     if (mem_read) begin
                         mem_enable_sel = 1'b0;
@@ -154,7 +149,8 @@ begin : state_actions
                 //hit second way
                 if (hit_datapath == 4'b0010) begin
                     //second data
-                    set_new_lru(1);
+                    set_lru[2] = 1'b1;
+                    set_lru[1] = 1'b0;
                     
                     if (mem_read) begin
                         mem_enable_sel = 1'b0;
@@ -178,7 +174,8 @@ begin : state_actions
 
                 if (hit_datapath == 4'b0100) begin
                     //third data
-                    set_new_lru(2);
+                    set_lru[2] = 1'b0;
+                    set_lru[0] = 1'b1;
                     
                     if (mem_read) begin
                         mem_enable_sel = 1'b0;
@@ -202,7 +199,8 @@ begin : state_actions
 
                 if (hit_datapath == 4'b1000) begin
                     //fourth data
-                    set_new_lru(3);
+                    set_lru[2] = 1'b0;
+                    set_lru[0] = 1'b0;
                     
                     if (mem_read) begin
                         mem_enable_sel = 1'b0;
@@ -266,7 +264,6 @@ begin : next_state_logic
     /* Next state information and conditions (if any)
      * for transitioning between states */
     next_states = state;
-    translated_index = pseudo_iru_translator(lru_output);
     unique case (state)
         /*idle: begin
             if (mem_read | mem_write) next_states = hit;

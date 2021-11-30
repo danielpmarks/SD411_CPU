@@ -39,9 +39,6 @@ module L2cache_datapath #(
     //tag control
     input logic[3:0] load_tag,
 
-    //data control
-    input logic data_array_select,
-
     //output to control
     output logic[2:0] lru_output,
     output logic[3:0] valid_out,
