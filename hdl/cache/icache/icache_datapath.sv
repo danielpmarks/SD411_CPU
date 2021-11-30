@@ -4,7 +4,7 @@ logic gates and other supporting logic. */
 
 module icache_datapath #(
     parameter s_offset = 5,
-    parameter s_index  = 3,
+    parameter s_index  = 5,
     parameter s_tag    = 32 - s_offset - s_index,
     parameter s_mask   = 2**s_offset,
     parameter s_line   = 8*s_mask,
@@ -75,8 +75,8 @@ logic [21:0] tag_output_1;
 //logic [31:0] write_enable_1;
 
 //breaking down mem_address
-assign input_tag = mem_address[31:10];
-assign input_index = mem_address[9:5];
+assign input_tag = mem_address[31:11];
+assign input_index = mem_address[10:5];
 
 //hit
 assign hit_0 = mem_read && valid_out[0] && (tag_output_0 == input_tag);
@@ -127,7 +127,7 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-tag_array_22_nox tag_array_0(
+tag_array_22_5 tag_array_0(
     .address(input_index),
 	.clock(clk),
 	.data(input_tag),
@@ -136,7 +136,7 @@ tag_array_22_nox tag_array_0(
 	.q(tag_output_0)
 );
 
-tag_array_22_nox tag_array_1(
+tag_array_22_5 tag_array_1(
     .address(input_index),
 	.clock(clk),
 	.data(input_tag),
@@ -145,65 +145,25 @@ tag_array_22_nox tag_array_1(
 	.q(tag_output_1)
 );
 
-data_array_64 data_array_0 (
+data_array_32 data_array_0 (
     .address(input_index),
-	.byteena(write_enable_0),
+	.byteena(32'hffffffff),
     .clock(clk),
 	.data(pmem_rdata),
-	.wren(1'b1),
+    .rden(1'b1),
+	.wren(write_enable_0),
 	.q(output_data_0)
 );
 
-data_array_64 data_array_1 (
+data_array_32 data_array_1 (
     .address(input_index),
-	.byteena(write_enable_1),
+	.byteena(32'hffffffff),
     .clock(clk),
 	.data(pmem_rdata),
-	.wren(1'b1),
+    .rden(1'b1),
+	.wren(write_enable_1),
 	.q(output_data_1)
 );
-/*icache_array #(.width(24))
-tag_array_0 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_tag[0]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(input_tag),
-    .dataout(tag_output_0)
-);
-
-icache_array  #(.width(24))
-tag_array_1 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_tag[1]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(input_tag),
-    .dataout(tag_output_1)
-);*/
-
-/*icache_data_array data_array_0 (
-    .clk(clk),
-    .load(write_enable_0),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(pmem_rdata),
-    .dataout(output_data_0)
-);*/
-
-
-/*icache_data_array data_array_1 (
-    .clk(clk),
-    .load(write_enable_1),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(pmem_rdata),
-    .dataout(output_data_1)
-);*/
 
 
 
@@ -215,45 +175,14 @@ always_comb begin
         //miss
         2'b00: begin
             //check which is LRU
-            /*unique case(lru_output) 
-                //first data
-                1'b0: begin
-                    //pmem_wdata = output_data_0;
-                    case (mem_enable_sel)
-                        1'b0: write_enable_0 = 32'd0;
-                        1'b1: write_enable_0 = 32'hffffffff;
-                    endcase
-                end
-                //second data
-                1'b1: begin
-                    
-                    //pmem_wdata = output_data_1;
-                    case (mem_enable_sel)
-                        1'b0: write_enable_1 = 32'd0;
-                        1'b1: write_enable_1 = 32'hffffffff;
-                    endcase
-                end
-                
-                end
-            endcase*/
+            
             mem_rdata256 = pmem_rdata;
         end
 
         //hit_0
         2'b01: begin
-            /*if (mem_write) begin
-                case (mem_enable_sel)
-                    1'b0: write_enable_0 = mem_byte_enable256;
-                    1'b1: write_enable_0 = 32'hffffffff;
-                endcase
-            end
             
-            if (mem_read) begin
-                case (mem_enable_sel)
-                    1'b0: write_enable_0 = 32'h0;
-                    1'b1: write_enable_0 = 32'hffffffff;
-                endcase*/
-                mem_rdata256 = output_data_0;
+            mem_rdata256 = output_data_0;
             //end
             
         end
