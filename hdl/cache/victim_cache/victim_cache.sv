@@ -25,13 +25,13 @@ localparam num_sets = 2**s_index;
 input clk;
 input rst;
 input request_from_cache; // tempt from cache for finding data and store evicted data
-input logic [31:0] address; // the address of the missed
+input logic [31:0] address; // the address of the missing data
 input logic is_dirty; // indicating if the evicted data is dirty
-input logic [width-1:0] evicted_data; // the evicted data that will be replaced by missed data
+input logic [width-1:0] evicted_data; // the evicted data that will be replaced by missing data
 input logic pmem_resp; // resp from main memory
 output logic resp; // resp to cache
-output logic found; // indicating if successfully find the missed data in victim cache
-output logic [width-1:0] dataout; // the missed data if found
+output logic found; // indicating if victim cache successfully finds the missing data in victim cache
+output logic [width-1:0] dataout; // the missing data if found
 output logic pmem_write; // write request to main memory
 output logic [31:0] mem_address;
 output logic [width-1:0] pmem_write_data; // write_data
@@ -44,7 +44,7 @@ logic lru_arr [15]; // the 15 bits pesudo lru
 logic dirty_arr [num_sets-1:0]; // dirty bit indicator
 logic valid_arr [num_sets-1:0]; // indicated the if the cell is occupied i.e. need for writeback
 
-logic [width-1:0] data_arr [num_sets-1:0] ; // work as the value of the dictionary
+logic [width-1:0] data_arr [num_sets-1:0]; // work as the value of the dictionary
 logic [31:0] address_arr [num_sets-1:0]; // work as key of the dictionary
 logic [width-1:0] _dataout; // if "hit" return read_data as dataout
 assign dataout = _dataout;
@@ -100,7 +100,7 @@ function void set_lru(int index);
         end
     end
     else begin
-        lru_arr[0] = 0
+        lru_arr[0] = 0;
         if (index <= 11) begin
             lru_arr[8] = 1;
             if (index <= 9) begin
@@ -151,21 +151,21 @@ get the index of lru data according to the current lru_arr
 */
 function int get_iru_index();
     idx = 0;
-    if (iru_arr[0]) begin
+    if (lru_arr[0]) begin
         idx = idx + 8;
     end
     else begin
         idx = idx + 1;
     end
 
-    if (iru_arr[idx]) begin
+    if (lru_arr[idx]) begin
         idx = idx + 4;
     end
     else begin
         idx = idx + 1;
     end
 
-    if (iru_arr[idx]) begin
+    if (lru_arr[idx]) begin
         idx = idx + 2;
     end
     else begin
@@ -251,13 +251,14 @@ enum int unsigned
 always_ff @(posedge clk)
 begin
     if (rst) begin
-        for (int i = 0; i < num_sets; ++i)
+        for (int i = 0; i < num_sets; ++i) begin
             data_arr[i] <= '0;
             dirty_arr[i] <= '0;
             address_arr[i] <= '0;
             valid_arr[i] <= '0;
             if (i != 15)
                 lru_arr[i] <= '0;
+        end
         state <= idle;
     end else begin
         state <= next_state;
@@ -284,15 +285,17 @@ always_comb begin: next_state_logic
     next_state = state;
     write_back_index = '0;
     mem_address = '0;
-    case(state):
+    case(state)
         idle: begin
             if(request_from_cache) begin // start working by the request from cache
                 write_back_index = get_iru_index();
-                for (int i = 0; i < 16; ++i) // search if missed data is in the data_arr
-                    if (address == address_arr[i])
+                for (int i = 0; i < 16; ++i) begin// search if missed data is in the data_arr
+                    if (address == address_arr[i]) begin
                         found = 1;
                         _dataout = data_arr[i];
                         set_lru(i);
+                    end
+                end
                 // if the iru data is dirty and valid, then we write it back to main memory
                 if (valid_arr[write_back_index] && dirty_arr[write_back_index]) begin
                     pmem_write = 1;
