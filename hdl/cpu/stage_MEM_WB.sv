@@ -8,7 +8,6 @@ module MEM_WB(
     input rv32i_control_word control_word_in,
 
     input logic [31:0] alu_in,
-    input logic [31:0] mdr_in,
     input logic br_en_in,
     input packed_imm imm_in,
 
@@ -17,7 +16,6 @@ module MEM_WB(
     output logic [31:0] pc,
     output regfilemux::regfilemux_sel_t regfilemux_sel,
     output logic [31:0] alu_out,
-    output logic [31:0] mdr_out,
     output logic br_en_out,
     output [31:0] u_imm,
 
@@ -28,7 +26,7 @@ module MEM_WB(
 );
 
 rv32i_control_word control_word;
-logic [31:0] alu, mdr;
+logic [31:0] alu;
 logic br_en;
 packed_imm imm;
 monitor_t monitor;
@@ -42,7 +40,6 @@ assign regfilemux_sel = control_word.regfilemux_sel;
 assign pc = control_word.pc;
 
 assign alu_out = alu;
-assign mdr_out = mdr;
 assign br_en_out = br_en;
 assign u_imm = imm.u_imm;
 
@@ -51,7 +48,6 @@ begin
     if (rst)
     begin
         alu <= 0;
-        mdr <= 0;
         br_en <= 0;
 
         imm.i_imm <= 32'b0;
@@ -79,7 +75,6 @@ begin
     begin
         control_word <= control_word_in;
         alu <= alu_in;
-        mdr <= mdr_in;
         br_en <= br_en_in;
         imm <= imm_in;
 
@@ -101,7 +96,6 @@ begin
         //Load in new monitor signals
         monitor.rd_addr <= control_word_in.rd;
         if(control_word_in.opcode == op_load) begin
-            monitor.mem_rdata <= mdr_in;
             unique case(load_funct3_t'(control_word_in.funct3))
                 lw: monitor.mem_rmask <= 4'b1111;
                 lh: monitor.mem_rmask <= 4'b0011 << {alu_in[1], 1'b0};
@@ -115,7 +109,6 @@ begin
     begin
         control_word <= control_word;
         alu <= alu;
-        mdr <= mdr;
         br_en <= br_en;
         imm <= imm;
     end

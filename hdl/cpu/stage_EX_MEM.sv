@@ -4,6 +4,7 @@ module EX_MEM(
     input clk,
     input rst,
     input load,
+    input bubble,
 
     input rv32i_control_word control_word_in,
     output rv32i_control_word control_word_out,
@@ -81,69 +82,81 @@ begin
     end
     else if (load == 1)
     begin
-        control_word <= control_word_in;
-        rs2 <= rs2_in;
-        alu <= alu_in;
-        mar <= mar_in;
-        br_en <= br_en_in;
-        imm <= imm_in;
+        if(bubble) begin
+            control_word.opcode <= op_imm;
+            control_word.aluop <= alu_add;
+            control_word.regfilemux_sel <= regfilemux::alu_out;
+            control_word.rd <= '0;
+            rs2 <= '0;
+            br_en <= '0;
 
-        // Load signals from monitor_in
-        monitor.commit <= monitor_in.commit;
-        monitor.pc_rdata <= monitor_in.pc_rdata;
-        monitor.instruction <= monitor_in.instruction;
-        monitor.trap <= monitor_in.trap;
-        monitor.rs1_addr <= monitor_in.rs1_addr;
-        monitor.rs2_addr <= monitor_in.rs2_addr;
+            monitor.commit <= '0;
+        end
+        else begin
+            control_word <= control_word_in;
+            rs2 <= rs2_in;
+            alu <= alu_in;
+            mar <= mar_in;
+            br_en <= br_en_in;
+            imm <= imm_in;
 
-        monitor.rs1_rdata <= rs1_in;
-        monitor.rs2_rdata <= rs2_in;
-        monitor.mem_addr <= 32'd0;
-        monitor.mem_wmask <= 4'd0;
-        monitor.mem_rmask <= 4'd0;
+            // Load signals from monitor_in
+            monitor.commit <= monitor_in.commit;
+            monitor.pc_rdata <= monitor_in.pc_rdata;
+            monitor.instruction <= monitor_in.instruction;
+            monitor.trap <= monitor_in.trap;
+            monitor.rs1_addr <= monitor_in.rs1_addr;
+            monitor.rs2_addr <= monitor_in.rs2_addr;
+
+            monitor.rs1_rdata <= rs1_in;
+            monitor.rs2_rdata <= rs2_in;
+            monitor.mem_addr <= 32'd0;
+            monitor.mem_wmask <= 4'd0;
+            monitor.mem_rmask <= 4'd0;
+            
+
+            if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
+                monitor.pc_wdata <= alu_in;
+            end
+            else if(control_word_in.opcode == op_jalr) begin
+                monitor.pc_wdata <= {alu_in[31:1], 1'b0};
+            end
+            else begin
+                monitor.pc_wdata <= monitor_in.pc_wdata;
+            end
+            if(control_word_in.opcode == op_store) begin
+                monitor.mem_addr <= alu_in;
         
-
-        if((br_en_in && control_word_in.opcode == op_br) || control_word_in.opcode == op_jal) begin
-            monitor.pc_wdata <= alu_in;
-        end
-        else if(control_word_in.opcode == op_jalr) begin
-            monitor.pc_wdata <= {alu_in[31:1], 1'b0};
-        end
-        else begin
-            monitor.pc_wdata <= monitor_in.pc_wdata;
-        end
-        if(control_word_in.opcode == op_store) begin
-            monitor.mem_addr <= alu_in;
-    
-            unique case(store_funct3_t'(control_word_in.funct3))
-                sw: begin 
-                    monitor.mem_wmask <= 4'b1111;
-                    monitor.mem_wdata <= rs2_in;
-                end
-                sh: begin 
-                    monitor.mem_wmask <= 4'b0011 << {alu_in[1], 1'b0};
-                    unique case(mar_in[1])
-                        1'b1: monitor.mem_wdata = rs2_in << 16;
-                        1'b0: monitor.mem_wdata = rs2_in;
-                    endcase
-                end
-                sb: begin 
-                    monitor.mem_wmask <= 4'b0001 << alu_in[1:0];
-                    unique case(mar_in[1:0])
-                        2'b11: monitor.mem_wdata = rs2_in << 24;
-                        2'b10: monitor.mem_wdata = rs2_in << 16;
-                        2'b01: monitor.mem_wdata = rs2_in << 8;
-                        2'b00: monitor.mem_wdata = rs2_in;
-                    endcase
-                end
-					 default: monitor.mem_wmask <= 4'b1111;
-            endcase
-        end
-        else if(control_word_in.opcode == op_load) begin
-            monitor.mem_addr <= alu_in;
-        end
-        else begin
-            monitor.mem_wdata <= 32'd0;
+                unique case(store_funct3_t'(control_word_in.funct3))
+                    sw: begin 
+                        monitor.mem_wmask <= 4'b1111;
+                        monitor.mem_wdata <= rs2_in;
+                    end
+                    sh: begin 
+                        monitor.mem_wmask <= 4'b0011 << {alu_in[1], 1'b0};
+                        unique case(mar_in[1])
+                            1'b1: monitor.mem_wdata = rs2_in << 16;
+                            1'b0: monitor.mem_wdata = rs2_in;
+                        endcase
+                    end
+                    sb: begin 
+                        monitor.mem_wmask <= 4'b0001 << alu_in[1:0];
+                        unique case(mar_in[1:0])
+                            2'b11: monitor.mem_wdata = rs2_in << 24;
+                            2'b10: monitor.mem_wdata = rs2_in << 16;
+                            2'b01: monitor.mem_wdata = rs2_in << 8;
+                            2'b00: monitor.mem_wdata = rs2_in;
+                        endcase
+                    end
+                        default: monitor.mem_wmask <= 4'b1111;
+                endcase
+            end
+            else if(control_word_in.opcode == op_load) begin
+                monitor.mem_addr <= alu_in;
+            end
+            else begin
+                monitor.mem_wdata <= 32'd0;
+            end
         end
     end
     else

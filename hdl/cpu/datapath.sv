@@ -28,7 +28,8 @@ packed_imm immediates[2:0];
 monitor_t monitors[3:0];
 
 logic stall;
-assign stall = !inst_resp || (monitors[2].commit && (data_read || data_write) && !data_resp); 
+logic mem_op;
+assign stall = !inst_resp || (monitors[3].commit && mem_op && !data_resp); 
 
 /* IF Signals */
 logic load_pc;
@@ -83,6 +84,7 @@ logic [1:0] mem_byte_enable;
 logic [31:0] mem_wdata, alu_out_mem, mar_out;
 logic [4:0] wmask;
 logic br_en_mem;
+logic bubble;
 
 /* MEM/WB Signals */
 logic load_mem_wb;
@@ -96,10 +98,10 @@ logic [31:0] regfilemux_out;
 /***************************** INSTRUCTION FETCH STAGE *****************************/
 logic [31:0] inst_addr_in;
 
-assign load_pc = !stall;
+assign load_pc = !stall && !bubble;
 
 
-assign inst_addr = inst_resp && !stall ? pc_in : pc_out;
+assign inst_addr = inst_resp && !stall && !bubble ? pc_in : pc_out;
 assign inst_read = 1'b1;
 //assign inst_read = !stall;
 
@@ -168,7 +170,7 @@ end
 
 /***************************** IF/ID BUFFER *****************************/
 
-assign load_if_id = !stall;
+assign load_if_id = !stall && !bubble;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
@@ -230,7 +232,7 @@ regfile REGFILE(
 
 /***************************** ID/EX BUFFER *******************************/
 
-assign load_id_ex = !stall;
+assign load_id_ex = !stall && !bubble;
 
 ID_EX stage_id_ex(.*, 
     .flush(flush),
@@ -353,6 +355,7 @@ assign load_ex_mem = !stall;
 assign data_addr = {alu_out_mem[31:2], 2'b00};
 logic flush_ex_mem;
 
+
 EX_MEM stage_ex_mem(
     .*,
     .load(load_ex_mem),
@@ -375,7 +378,8 @@ EX_MEM stage_ex_mem(
     .imm_out(immediates[2]),
     .monitor_in(monitors[1]),
     .monitor_out(monitors[2]),
-    .flush(flush_ex_mem)
+    .flush(flush_ex_mem),
+    .bubble(bubble)
 );
 
 always_comb begin
@@ -425,12 +429,20 @@ end
 assign load_mem_wb = !stall;
 logic flush_mem_wb;
 
+
+always_ff@(posedge clk) begin
+    if(rst)
+        mem_op <= 0;
+    else if(load_mem_wb)
+        mem_op <= control_words[2].opcode == op_load || control_words[2].opcode == op_store;
+    
+end
+
 MEM_WB stage_mem_wb(
     .*,
 	.load(load_mem_wb),
     .control_word_in(control_words[2]),
     .alu_in(alu_out_mem),
-    .mdr_in(data_rdata),
     .br_en_in(br_en_mem),
     .imm_in(immediates[2]),
     .load_regfile(load_regfile),
@@ -438,7 +450,6 @@ MEM_WB stage_mem_wb(
     .pc(pc_wb),
     .regfilemux_sel(regfilemux_sel),
     .alu_out(alu_out_wb),
-    .mdr_out(mdr_out_wb),
     .br_en_out(br_en_wb),
     .u_imm(u_imm_wb),
 
@@ -453,19 +464,21 @@ forwarding_unit forwarding_unit(
     .EX_MEM_regfile_sel(control_words[2].regfilemux_sel),
     .MEM_WB_rd(rd_wb),
     .EX_MEM_rd(control_words[2].rd),
+    .mem_load_inst(control_words[2].opcode == op_load),
     .rs1(rs1_addr_ex), // reg addr from ID/EX stage
     .rs2(rs2_addr_ex), // reg addr from ID/EX stage
     .rs1_out(rs1_ex),
     .rs2_out(rs2_ex),
     .EX_MEM_alu_out(alu_out_mem),
-    .EX_MEM_mem_out(data_rdata),
     .MEM_WB_alu_out(alu_out_wb),
-    .MEM_WB_mem_out(mdr_out_wb),
+    .MEM_WB_mem_out(data_rdata),
     .forward_mux1_out(forward_mux1_out),
     .forward_mux2_out(forward_mux2_out),
 
     .flush_ex_mem(flush_ex_mem),
-    .flush_mem_wb(flush_mem_wb)
+    .flush_mem_wb(flush_mem_wb),
+
+    .bubble(bubble)
 
 );
 
