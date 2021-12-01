@@ -75,17 +75,14 @@ logic mem_enable_sel;
 
 
 logic [31:0] req_addr;
-logic [31:0] next_mem_addr;
-logic next_mem_read;
-logic next_mem_write;
 logic mem_read_delayed;
 logic mem_write_delayed;
-logic [31:0] mem_byte_enable_delayed;
-logic [31:0] next_mem_byte_enable;
+logic [3:0] mem_byte_enable_delayed;
 logic mem_read_or_write_delay;
 logic mem_read_or_write;
 logic [255:0] mem_wdata_delayed;
-logic[255:0] next_mem_wdata;
+logic [1:0] wren;
+
 assign mem_read_or_write_delay = (mem_write_delayed == 1 || mem_read_delayed == 1);
 assign mem_read_or_write = (mem_write == 1 || mem_read == 1);
 always_ff@(posedge clk) begin
@@ -93,7 +90,7 @@ always_ff@(posedge clk) begin
         req_addr <= mem_address;
         mem_read_delayed <= mem_read;
         mem_write_delayed <= mem_write;
-        mem_byte_enable_delayed <= mem_byte_enable256;
+        mem_byte_enable_delayed <= mem_byte_enable;
         mem_wdata_delayed <= mem_wdata256;
     end else begin
         req_addr <= 0;
@@ -131,7 +128,7 @@ dcache_datapath dcache_datapath(.*,
     .mem_write(mem_write),
     .mem_read_delayed(mem_read_delayed),
     .mem_write_delayed(mem_write_delayed),
-    .mem_byte_enable256(mem_byte_enable_delayed),
+    .mem_byte_enable256(mem_byte_enable256),
     .mem_wdata256(mem_wdata_delayed)
 );
 
@@ -146,9 +143,9 @@ dcache_bus_adapter dcache_bus_adapter
 .mem_rdata256,
 .mem_wdata,
 .mem_rdata,
-.mem_byte_enable,
+.mem_byte_enable(mem_byte_enable_delayed),
 .mem_byte_enable256,
-.address(mem_address)
+.address(req_addr)
 );
 
 endmodule : dcache

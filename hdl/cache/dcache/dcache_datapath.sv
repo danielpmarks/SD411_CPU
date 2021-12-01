@@ -61,7 +61,9 @@ module dcache_datapath #(
     /* Signals between cache and bus adapter */
     input logic [31:0] mem_byte_enable256,
     input logic [255:0] mem_wdata256,
-    output logic [255:0] mem_rdata256
+    output logic [255:0] mem_rdata256,
+
+    input logic [1:0] wren
 );
 
 //internal signal
@@ -95,7 +97,7 @@ lru (
     .read(1'b1),
     .load(load_lru),
     .rindex(input_index),
-    .windex(input_index),
+    .windex(mem_address[9:5]),
     .datain(set_lru),
     .dataout(lru_output)
 );
@@ -174,7 +176,7 @@ data_array_32 data_array_0 (
     .clock(clk),
 	.data(data_in),
     .rden(1'b1),
-	.wren(1'b1),
+	.wren(wren[0]),
 	.q(output_data_0)
 );
 
@@ -184,7 +186,7 @@ data_array_32 data_array_1 (
     .clock(clk),
 	.data(data_in),
     .rden(1'b1),
-	.wren(1'b1),
+	.wren(wren[1]),
 	.q(output_data_1)
 );
 /*data_array_64 data_array_0 (

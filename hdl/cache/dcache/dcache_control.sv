@@ -37,7 +37,9 @@ module dcache_control (
     output logic mem_enable_sel,
     output logic [31:0] write_enable_0,
     output logic [31:0] write_enable_1,
-    input logic [31:0] mem_byte_enable256
+    input logic [31:0] mem_byte_enable256,
+
+    output logic[1:0] wren
     
 );
 
@@ -64,9 +66,10 @@ function void set_defaults();
     pmem_write = 0;
     mem_resp = 0;	
     mem_enable_sel = 0;
-    write_enable_0 = 0;
-    write_enable_1 = 0;
+    write_enable_0 = {32{1'b1}};
+    write_enable_1 = {32{1'b1}};
     next_writing = 0;
+    wren = 0;
 endfunction
 
 always_comb
@@ -81,20 +84,10 @@ begin : state_actions
         hit: begin
             //miss
         
-            if (hit_datapath == 0) begin
-                //set lru to be the other one
-                set_lru = ~lru_output;
-                
-                
-                if (dirty_out[lru_output]) begin
-                    //mem_enable_sel = 1'b1;
-                    set_dirty[lru_output] = 0;
-                    load_dirty[lru_output] = 1;
-                end
-            end
+            
 
             //hit first way
-            else if (hit_datapath == 2'b01) begin
+            if (hit_datapath == 2'b01) begin
                 //first data
                 set_lru = 1;
                 
@@ -112,6 +105,7 @@ begin : state_actions
                         load_dirty = 2'b01;
                         mem_enable_sel = 1'b0;
                         write_enable_0 = mem_byte_enable256;
+                        wren[0] = 1'b1;
                         //set lru at the end of the write
                         load_lru = 1'b1;
                         next_writing = 1'b1;
@@ -145,6 +139,7 @@ begin : state_actions
                         load_dirty = 2'b10;
                         mem_enable_sel = 1'b0;
                         write_enable_1 = mem_byte_enable256;
+                        wren[1] = 1'b1;
                         //set lru at the end of the write
                         load_lru = 1'b1;
                         next_writing = 1'b1;
@@ -161,6 +156,15 @@ begin : state_actions
         write_back: begin
             pmem_write = 1'b1;
             //if (lru_output)
+            if (pmem_resp) begin
+                //set lru to be the other one
+                set_lru = ~lru_output;
+                if (dirty_out[lru_output]) begin
+                    //mem_enable_sel = 1'b1;
+                    set_dirty[lru_output] = 0;
+                    load_dirty[lru_output] = 1;
+                end
+            end
         end
 
         write_cache: begin
@@ -181,6 +185,7 @@ begin : state_actions
                 mem_enable_sel = 1'b1;
                 load_tag[lru_output] = 1'b1;
                 load_lru = 1'b1;
+                wren[lru_output] = 1'b1;
             end
         end
 

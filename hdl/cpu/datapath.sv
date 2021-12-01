@@ -355,7 +355,7 @@ logic [31:0] mem_wdata_masked;
 assign waiting_for_mem = stall;
 
 assign load_ex_mem = !stall;
-assign data_addr = !waiting_for_mem ? {mar_out[31:2], 2'b00} : monitors[3].mem_addr;
+assign data_addr = !waiting_for_mem ? {mar_out[31:2], 2'b00} : {monitors[3].mem_addr[31:2],2'b00};
 assign data_read = !waiting_for_mem ? mem_read : control_words[3].mem_read;
 assign data_write = !waiting_for_mem ? mem_write : control_words[3].mem_write;
 assign data_mbe = !waiting_for_mem ? mem_byte_enable : monitors[3].mem_wmask;
@@ -405,12 +405,12 @@ always_comb begin
                     1'b1: mem_wdata_masked = mem_wdata << 16;
                     1'b0: mem_wdata_masked = mem_wdata;
                 endcase*/
-                unique case(alu_out[1])
+                unique case(alu_out_mem[1])
                     1'b1: mem_wdata_masked = mem_wdata << 16;
                     1'b0: mem_wdata_masked = mem_wdata;
                 endcase
                 //mem_byte_enable = 4'b0011 << (mar_out[1] << 1);
-                mem_byte_enable = 4'b0011 << (alu_out[1] << 1);
+                mem_byte_enable = 4'b0011 << (alu_out_mem[1] << 1);
             end
             sb: begin
                 /*unique case(mar_out[1:0])
@@ -420,13 +420,13 @@ always_comb begin
                     2'b00: mem_wdata_masked = mem_wdata;
                 endcase
                 mem_byte_enable = 4'b0001 << mar_out[1:0];*/
-                unique case(alu_out[1:0])
+                unique case(alu_out_mem[1:0])
                     2'b11: mem_wdata_masked = mem_wdata << 24;
                     2'b10: mem_wdata_masked = mem_wdata << 16;
                     2'b01: mem_wdata_masked = mem_wdata << 8;
                     2'b00: mem_wdata_masked = mem_wdata;
                 endcase
-                mem_byte_enable = 4'b0001 << alu_out[1:0];
+                mem_byte_enable = 4'b0001 << alu_out_mem[1:0];
             end
             default: ;
         endcase

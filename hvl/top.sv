@@ -66,11 +66,11 @@ assign itf.inst_rdata = dut.instruction_cache.mem_rdata;
 
 assign itf.data_read = dut.data_cache.mem_read_delayed;
 assign itf.data_write = dut.data_cache.mem_write_delayed;
-assign itf.data_mbe = dut.data_cache.mem_byte_enable;
-assign itf.data_addr = dut.data_cache.req_addr;
-assign itf.data_wdata = dut.data_cache.mem_wdata;
+assign itf.data_mbe = dut.data_cache.mem_byte_enable_delayed;
+assign itf.data_addr = dut.datapath.monitors[3].mem_addr;
+assign itf.data_wdata = dut.datapath.monitors[3].mem_wdata;
 assign itf.data_resp = dut.data_cache.mem_resp;
-assign itf.data_rdata = dut.data_cache.mem_rdata;
+assign itf.data_rdata = dut.datapath.mdr_out_wb;
 
 /*********************** End Shadow Memory Assignments ***********************/
 
