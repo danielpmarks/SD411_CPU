@@ -22,13 +22,14 @@ module datapath(
     input logic [31:0] data_rdata
 );
 rv32i_control_word control_word_init;
-rv32i_control_word control_words[2:0];
+rv32i_control_word control_words[3:0];
 packed_imm immediates[2:0];
 
 monitor_t monitors[3:0];
 
 logic stall;
-assign stall = !inst_resp || (monitors[2].commit && (data_read || data_write) && !data_resp); 
+logic mem_op;
+assign stall = !inst_resp || (monitors[3].commit && mem_op && !data_resp); 
 
 /* IF Signals */
 logic load_pc;
@@ -79,10 +80,11 @@ assign flush = (control_words[1].opcode == op_br || control_words[1].opcode == o
 /* EX/MEM Signals */
 logic load_ex_mem;
 logic mem_read, mem_write;
-logic [1:0] mem_byte_enable;
+logic [3:0] mem_byte_enable;
 logic [31:0] mem_wdata, alu_out_mem, mar_out;
 logic [4:0] wmask;
 logic br_en_mem;
+logic bubble;
 
 /* MEM/WB Signals */
 logic load_mem_wb;
@@ -96,10 +98,10 @@ logic [31:0] regfilemux_out;
 /***************************** INSTRUCTION FETCH STAGE *****************************/
 logic [31:0] inst_addr_in;
 
-assign load_pc = !stall;
+assign load_pc = !stall && !bubble;
 
 
-assign inst_addr = inst_resp && !stall ? pc_in : pc_out;
+assign inst_addr = inst_resp && !stall && !bubble ? pc_in : pc_out;
 assign inst_read = 1'b1;
 //assign inst_read = !stall;
 
@@ -168,7 +170,7 @@ end
 
 /***************************** IF/ID BUFFER *****************************/
 
-assign load_if_id = !stall;
+assign load_if_id = !stall && !bubble;
 assign ir_in = inst_rdata;
 
 IF_ID stage_if_id(
@@ -230,7 +232,7 @@ regfile REGFILE(
 
 /***************************** ID/EX BUFFER *******************************/
 
-assign load_id_ex = !stall;
+assign load_id_ex = !stall && !bubble;
 
 ID_EX stage_id_ex(.*, 
     .flush(flush),
@@ -348,10 +350,20 @@ end
 
 /***************************** EX/MEM BUFFER ********************************/
 
+logic waiting_for_mem;
+logic [31:0] mem_wdata_masked;
+assign waiting_for_mem = stall;
+
 assign load_ex_mem = !stall;
-//assign data_addr = {mar_out[31:2], 2'b00};
-assign data_addr = {alu_out_mem[31:2], 2'b00};
+assign data_addr = !waiting_for_mem ? {mar_out[31:2], 2'b00} : {monitors[3].mem_addr[31:2],2'b00};
+assign data_read = !waiting_for_mem ? mem_read : control_words[3].mem_read;
+assign data_write = !waiting_for_mem ? mem_write : control_words[3].mem_write;
+assign data_mbe = !waiting_for_mem ? mem_byte_enable : monitors[3].mem_wmask;
+assign data_wdata = !waiting_for_mem ? mem_wdata_masked : monitors[3].mem_wdata;
+
+//assign data_addr = {alu_out_mem[31:2], 2'b00};
 logic flush_ex_mem;
+
 
 EX_MEM stage_ex_mem(
     .*,
@@ -365,8 +377,8 @@ EX_MEM stage_ex_mem(
     .br_en_in(br_en),
     .imm_in(immediates[1]),
 
-    .mem_read(data_read),
-    .mem_write(data_write),
+    .mem_read(mem_read),
+    .mem_write(mem_write),
     .mem_wdata(mem_wdata),
     .alu_out(alu_out_mem),
     .mar_out(mar_out),
@@ -375,45 +387,46 @@ EX_MEM stage_ex_mem(
     .imm_out(immediates[2]),
     .monitor_in(monitors[1]),
     .monitor_out(monitors[2]),
-    .flush(flush_ex_mem)
+    .flush(flush_ex_mem),
+    .bubble(bubble)
 );
 
 always_comb begin
-    data_mbe = 4'b1111;
-	data_wdata = 32'd0;
+    mem_byte_enable = 4'b1111;
+	mem_wdata_masked = 32'd0;
     if(control_words[2].opcode == op_store) begin
         unique case(store_funct3_t'(control_words[2].funct3)) 
             sw: begin
-                data_wdata = mem_wdata;
-                data_mbe = 4'b1111;
+                mem_wdata_masked = mem_wdata;
+                mem_byte_enable = 4'b1111;
             end
             sh: begin
                 /*unique case(mar_out[1])
-                    1'b1: data_wdata = mem_wdata << 16;
-                    1'b0: data_wdata = mem_wdata;
+                    1'b1: mem_wdata_masked = mem_wdata << 16;
+                    1'b0: mem_wdata_masked = mem_wdata;
                 endcase*/
-                unique case(alu_out[1])
-                    1'b1: data_wdata = mem_wdata << 16;
-                    1'b0: data_wdata = mem_wdata;
+                unique case(alu_out_mem[1])
+                    1'b1: mem_wdata_masked = mem_wdata << 16;
+                    1'b0: mem_wdata_masked = mem_wdata;
                 endcase
-                //data_mbe = 4'b0011 << (mar_out[1] << 1);
-                data_mbe = 4'b0011 << (alu_out[1] << 1);
+                //mem_byte_enable = 4'b0011 << (mar_out[1] << 1);
+                mem_byte_enable = 4'b0011 << (alu_out_mem[1] << 1);
             end
             sb: begin
                 /*unique case(mar_out[1:0])
-                    2'b11: data_wdata = mem_wdata << 24;
-                    2'b01: data_wdata = mem_wdata << 16;
-                    2'b10: data_wdata = mem_wdata << 8;
-                    2'b00: data_wdata = mem_wdata;
+                    2'b11: mem_wdata_masked = mem_wdata << 24;
+                    2'b01: mem_wdata_masked = mem_wdata << 16;
+                    2'b10: mem_wdata_masked = mem_wdata << 8;
+                    2'b00: mem_wdata_masked = mem_wdata;
                 endcase
-                data_mbe = 4'b0001 << mar_out[1:0];*/
-                unique case(alu_out[1:0])
-                    2'b11: data_wdata = mem_wdata << 24;
-                    2'b10: data_wdata = mem_wdata << 16;
-                    2'b01: data_wdata = mem_wdata << 8;
-                    2'b00: data_wdata = mem_wdata;
+                mem_byte_enable = 4'b0001 << mar_out[1:0];*/
+                unique case(alu_out_mem[1:0])
+                    2'b11: mem_wdata_masked = mem_wdata << 24;
+                    2'b10: mem_wdata_masked = mem_wdata << 16;
+                    2'b01: mem_wdata_masked = mem_wdata << 8;
+                    2'b00: mem_wdata_masked = mem_wdata;
                 endcase
-                data_mbe = 4'b0001 << alu_out[1:0];
+                mem_byte_enable = 4'b0001 << alu_out_mem[1:0];
             end
             default: ;
         endcase
@@ -425,12 +438,21 @@ end
 assign load_mem_wb = !stall;
 logic flush_mem_wb;
 
+
+always_ff@(posedge clk) begin
+    if(rst)
+        mem_op <= 0;
+    else if(load_mem_wb)
+        mem_op <= control_words[2].opcode == op_load || control_words[2].opcode == op_store;
+    
+end
+
 MEM_WB stage_mem_wb(
     .*,
 	.load(load_mem_wb),
     .control_word_in(control_words[2]),
+    .control_word_out(control_words[3]),
     .alu_in(alu_out_mem),
-    .mdr_in(data_rdata),
     .br_en_in(br_en_mem),
     .imm_in(immediates[2]),
     .load_regfile(load_regfile),
@@ -438,7 +460,6 @@ MEM_WB stage_mem_wb(
     .pc(pc_wb),
     .regfilemux_sel(regfilemux_sel),
     .alu_out(alu_out_wb),
-    .mdr_out(mdr_out_wb),
     .br_en_out(br_en_wb),
     .u_imm(u_imm_wb),
 
@@ -453,22 +474,24 @@ forwarding_unit forwarding_unit(
     .EX_MEM_regfile_sel(control_words[2].regfilemux_sel),
     .MEM_WB_rd(rd_wb),
     .EX_MEM_rd(control_words[2].rd),
+    .mem_load_inst(control_words[2].opcode == op_load),
     .rs1(rs1_addr_ex), // reg addr from ID/EX stage
     .rs2(rs2_addr_ex), // reg addr from ID/EX stage
     .rs1_out(rs1_ex),
     .rs2_out(rs2_ex),
     .EX_MEM_alu_out(alu_out_mem),
-    .EX_MEM_mem_out(data_rdata),
     .MEM_WB_alu_out(alu_out_wb),
-    .MEM_WB_mem_out(mdr_out_wb),
+    .MEM_WB_mem_out(data_rdata),
     .forward_mux1_out(forward_mux1_out),
     .forward_mux2_out(forward_mux2_out),
 
     .flush_ex_mem(flush_ex_mem),
-    .flush_mem_wb(flush_mem_wb)
+    .flush_mem_wb(flush_mem_wb),
+
+    .bubble(bubble)
 
 );
-
+assign mdr_out_wb = data_rdata;
 always_comb begin
     /*assign mem_address = {not_zeroed_mem[31 : 2], 2'd0};
     assign mem_address_2bit = not_zeroed_mem[1:0];*/

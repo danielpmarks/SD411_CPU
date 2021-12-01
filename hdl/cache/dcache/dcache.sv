@@ -72,9 +72,70 @@ logic [31:0] mem_byte_enable256;
 	
 logic mem_enable_sel;
 
-dcache_control dcache_control (.*);
 
-dcache_datapath dcache_datapath(.*);
+
+logic [31:0] req_addr;
+logic mem_read_delayed;
+logic mem_write_delayed;
+logic [3:0] mem_byte_enable_delayed;
+logic mem_read_or_write_delay;
+logic mem_read_or_write;
+logic [255:0] mem_wdata_delayed;
+logic [1:0] wren;
+
+assign mem_read_or_write_delay = (mem_write_delayed == 1 || mem_read_delayed == 1);
+assign mem_read_or_write = (mem_write == 1 || mem_read == 1);
+always_ff@(posedge clk) begin
+    if(!rst) begin
+        req_addr <= mem_address;
+        mem_read_delayed <= mem_read;
+        mem_write_delayed <= mem_write;
+        mem_byte_enable_delayed <= mem_byte_enable;
+        mem_wdata_delayed <= mem_wdata256;
+    end else begin
+        req_addr <= 0;
+        mem_read_delayed <= 0;
+        mem_write_delayed <= 0;
+        mem_byte_enable_delayed <= 0;
+        mem_wdata_delayed <= 0;
+    end
+end
+
+/*
+always_comb begin
+    if((mem_read_or_write_delay && !mem_resp) /*|| (!mem_read_or_write && !mem_resp)) begin
+        
+        next_mem_read = mem_read_delayed;
+        next_mem_write = mem_write_delayed;
+        next_mem_addr = req_addr;
+        next_mem_byte_enable = mem_byte_enable_delayed;
+        next_mem_wdata = mem_wdata_delayed;
+    end
+    else begin
+        next_mem_read = mem_read;
+        next_mem_write = mem_write;
+        next_mem_addr = mem_address;
+        next_mem_byte_enable = mem_byte_enable256;
+        next_mem_wdata = mem_wdata256;
+        
+    end
+end*/
+
+dcache_datapath dcache_datapath(.*,
+    .mem_address(req_addr),
+    .index_in(mem_address[9:5]),
+    .mem_read(mem_read),
+    .mem_write(mem_write),
+    .mem_read_delayed(mem_read_delayed),
+    .mem_write_delayed(mem_write_delayed),
+    .mem_byte_enable256(mem_byte_enable256),
+    .mem_wdata256(mem_wdata_delayed)
+);
+
+dcache_control dcache_control (.*,
+    .mem_read(mem_read_delayed),
+    .mem_write(mem_write_delayed)
+);
 
 dcache_bus_adapter dcache_bus_adapter
 (
@@ -82,9 +143,9 @@ dcache_bus_adapter dcache_bus_adapter
 .mem_rdata256,
 .mem_wdata,
 .mem_rdata,
-.mem_byte_enable,
+.mem_byte_enable(mem_byte_enable_delayed),
 .mem_byte_enable256,
-.address(mem_address)
+.address(req_addr)
 );
 
 endmodule : dcache

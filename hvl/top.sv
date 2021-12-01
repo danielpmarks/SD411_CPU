@@ -51,7 +51,7 @@ assign rvfi.pc_wdata = dut.datapath.monitors[3].pc_wdata;
 assign rvfi.mem_addr = dut.datapath.monitors[3].mem_addr;
 assign rvfi.mem_rmask = dut.datapath.monitors[3].mem_rmask;
 assign rvfi.mem_wmask = dut.datapath.monitors[3].mem_wmask;
-assign rvfi.mem_rdata = dut.datapath.monitors[3].mem_rdata;
+assign rvfi.mem_rdata = dut.datapath.data_rdata;
 assign rvfi.mem_wdata = dut.datapath.monitors[3].mem_wdata;
 
 
@@ -64,13 +64,13 @@ assign itf.inst_addr = dut.instruction_cache.req_addr;
 assign itf.inst_resp = dut.instruction_cache.mem_resp;
 assign itf.inst_rdata = dut.instruction_cache.mem_rdata;
 
-assign itf.data_read = dut.data_cache.mem_read;
-assign itf.data_write = dut.data_cache.mem_write;
-assign itf.data_mbe = dut.data_cache.mem_byte_enable_cpu;
-assign itf.data_addr = dut.data_cache.mem_address;
-assign itf.data_wdata = dut.data_cache.mem_wdata_cpu;
+assign itf.data_read = dut.data_cache.mem_read_delayed;
+assign itf.data_write = dut.data_cache.mem_write_delayed;
+assign itf.data_mbe = dut.data_cache.mem_byte_enable_delayed;
+assign itf.data_addr = dut.datapath.monitors[3].mem_addr;
+assign itf.data_wdata = dut.datapath.monitors[3].mem_wdata;
 assign itf.data_resp = dut.data_cache.mem_resp;
-assign itf.data_rdata = dut.data_cache.mem_rdata_cpu;
+assign itf.data_rdata = dut.datapath.mdr_out_wb;
 
 /*********************** End Shadow Memory Assignments ***********************/
 
