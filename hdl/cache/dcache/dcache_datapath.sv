@@ -48,6 +48,8 @@ module dcache_datapath #(
     /* Signals between cache and CPU */
     input logic mem_write,
     input logic mem_read,
+    input logic mem_write_delayed,
+    input logic mem_read_delayed,
     input logic [31:0] mem_address,
     input logic [4:0] index_in,
 
@@ -78,9 +80,13 @@ assign input_index = index_in;
 
 
 //hit
-assign hit_0 = (mem_write | mem_read) && valid_out[0] && (tag_output_0 == input_tag);
-assign hit_1 = (mem_write | mem_read) && valid_out[1] && (tag_output_1 == input_tag);
+assign hit_0 = (mem_write_delayed | mem_read_delayed) && valid_out[0] && (tag_output_0 == input_tag);
+assign hit_1 = (mem_write_delayed | mem_read_delayed) && valid_out[1] && (tag_output_1 == input_tag);
 assign hit_datapath = {hit_1, hit_0};
+
+logic [255:0] data_in;
+
+assign data_in = hit_0 || hit_1 ? mem_wdata256 : pmem_rdata;
 
 dcache_array #(.s_index(s_index), .width(1))
 lru (
@@ -166,7 +172,7 @@ data_array_32 data_array_0 (
     .address(input_index),
 	.byteena(write_enable_0),
     .clock(clk),
-	.data(pmem_rdata),
+	.data(data_in),
     .rden(1'b1),
 	.wren(1'b1),
 	.q(output_data_0)
@@ -176,7 +182,7 @@ data_array_32 data_array_1 (
     .address(input_index),
 	.byteena(write_enable_1),
     .clock(clk),
-	.data(pmem_rdata),
+	.data(data_in),
     .rden(1'b1),
 	.wren(1'b1),
 	.q(output_data_1)

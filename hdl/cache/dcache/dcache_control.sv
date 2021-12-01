@@ -41,6 +41,8 @@ module dcache_control (
     
 );
 
+logic writing, next_writing;
+
 enum int unsigned {
     /* List of states */
 	
@@ -64,6 +66,7 @@ function void set_defaults();
     mem_enable_sel = 0;
     write_enable_0 = 0;
     write_enable_1 = 0;
+    next_writing = 0;
 endfunction
 
 always_comb
@@ -77,32 +80,33 @@ begin : state_actions
 
         hit: begin
             //miss
-            if (mem_write) begin
-                if (hit_datapath == 0) begin
-                    //set lru to be the other one
-                    set_lru = ~lru_output;
-                    
-                    
-                    if (dirty_out[lru_output]) begin
-                        //mem_enable_sel = 1'b1;
-                        set_dirty[lru_output] = 0;
-                        load_dirty[lru_output] = 1;
-                    end
+        
+            if (hit_datapath == 0) begin
+                //set lru to be the other one
+                set_lru = ~lru_output;
+                
+                
+                if (dirty_out[lru_output]) begin
+                    //mem_enable_sel = 1'b1;
+                    set_dirty[lru_output] = 0;
+                    load_dirty[lru_output] = 1;
                 end
+            end
 
-                //hit first way
-                if (hit_datapath == 2'b01) begin
-                    //first data
-                    set_lru = 1;
-                    
-                    if (mem_read) begin
-                        mem_enable_sel = 1'b0;
-                        write_enable_0 = 32'd0;
-                        mem_resp = 1'b1;
-                        load_lru = 1'b1;
-                    end
-                    else if (mem_write) begin
-                        mem_resp = 1'b1;
+            //hit first way
+            else if (hit_datapath == 2'b01) begin
+                //first data
+                set_lru = 1;
+                
+                if (mem_read) begin
+                    mem_enable_sel = 1'b0;
+                    write_enable_0 = 32'd0;
+                    mem_resp = 1'b1;
+                    load_lru = 1'b1;
+                end
+                else if (mem_write) begin
+                    //First cycle to read and compare the tage data
+                    if(!writing) begin
                         //set the first dirty
                         set_dirty = 2'b01;
                         load_dirty = 2'b01;
@@ -110,31 +114,45 @@ begin : state_actions
                         write_enable_0 = mem_byte_enable256;
                         //set lru at the end of the write
                         load_lru = 1'b1;
+                        next_writing = 1'b1;
+                    end 
+                    //Second cycle to write to cache
+                    else begin
+                        mem_resp = 1'b1;
+                        next_writing = 1'b0;
                     end
-                end
-
-                //hit second way
-                if (hit_datapath == 2'b10) begin
-                    //second data
-                    set_lru = 0;
                     
-                    if (mem_read) begin
-                        mem_enable_sel = 1'b0;
-                        write_enable_1 = 32'd0;
-                        mem_resp = 1'b1;
-                        load_lru = 1'b1;
-                    end
-                    else if (mem_write) begin
-                        mem_resp = 1'b1;
-                        //set the second dirty
+                end
+            end
+
+            //hit second way
+            else if (hit_datapath == 2'b10) begin
+                //second data
+                set_lru = 0;
+                
+                if (mem_read) begin
+                    mem_enable_sel = 1'b0;
+                    write_enable_1 = 32'd0;
+                    mem_resp = 1'b1;
+                    load_lru = 1'b1;
+                end
+                else if (mem_write) begin
+
+                    //First cycle to read and compare the tage data
+                    if(!writing) begin
+                        //set the first dirty
                         set_dirty = 2'b10;
                         load_dirty = 2'b10;
                         mem_enable_sel = 1'b0;
-
                         write_enable_1 = mem_byte_enable256;
-
                         //set lru at the end of the write
                         load_lru = 1'b1;
+                        next_writing = 1'b1;
+                    end 
+                    //Second cycle to write to cache
+                    else begin
+                        mem_resp = 1'b1;
+                        next_writing = 1'b0;
                     end
                 end
             end
@@ -212,6 +230,7 @@ always_ff @(posedge clk)
 begin: next_state_assignment
     /* Assignment of next state on clock edge */
     state <= next_states;
+    writing <= next_writing;
 end
 
 endmodule : dcache_control

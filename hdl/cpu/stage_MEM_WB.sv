@@ -6,6 +6,7 @@ module MEM_WB(
     input load,
 
     input rv32i_control_word control_word_in,
+    output rv32i_control_word control_word_out,
 
     input logic [31:0] alu_in,
     input logic br_en_in,
@@ -31,6 +32,7 @@ logic br_en;
 packed_imm imm;
 monitor_t monitor;
 
+assign control_word_out = control_word;
 assign monitor_out = monitor;
 assign flush = ~monitor.commit;
 
