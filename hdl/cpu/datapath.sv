@@ -351,8 +351,8 @@ end
 /***************************** EX/MEM BUFFER ********************************/
 
 assign load_ex_mem = !stall;
-//assign data_addr = {mar_out[31:2], 2'b00};
-assign data_addr = {alu_out_mem[31:2], 2'b00};
+assign data_addr = {mar_out[31:2], 2'b00};
+//assign data_addr = {alu_out_mem[31:2], 2'b00};
 logic flush_ex_mem;
 
 
@@ -481,7 +481,7 @@ forwarding_unit forwarding_unit(
     .bubble(bubble)
 
 );
-
+assign mdr_out_wb = data_rdata;
 always_comb begin
     /*assign mem_address = {not_zeroed_mem[31 : 2], 2'd0};
     assign mem_address_2bit = not_zeroed_mem[1:0];*/
