@@ -4,7 +4,7 @@ logic gates and other supporting logic. */
 
 module dcache_datapath #(
     parameter s_offset = 5,
-    parameter s_index  = 3,
+    parameter s_index  = 5,
     parameter s_tag    = 32 - s_offset - s_index,
     parameter s_mask   = 2**s_offset,
     parameter s_line   = 8*s_mask,
@@ -49,7 +49,8 @@ module dcache_datapath #(
     input logic mem_write,
     input logic mem_read,
     input logic [31:0] mem_address,
-    
+    input logic [4:0] index_in,
+
     /* Signals between cache and main memory */
     output logic [31:0] pmem_address,
     output logic [255:0] pmem_wdata,
@@ -65,7 +66,6 @@ module dcache_datapath #(
 logic [21:0] input_tag;
 logic [4:0] input_index;
 logic hit_0, hit_1;
-//logic [1:0] hit;
 logic [255:0] data_array_in;
 logic [255:0] output_data_0;
 logic [255:0] output_data_1;
@@ -74,7 +74,7 @@ logic [21:0] tag_output_1;
 
 //breaking down mem_address
 assign input_tag = mem_address[31:10];
-assign input_index = mem_address[9:5];
+assign input_index = index_in;
 
 
 //hit
@@ -82,7 +82,7 @@ assign hit_0 = (mem_write | mem_read) && valid_out[0] && (tag_output_0 == input_
 assign hit_1 = (mem_write | mem_read) && valid_out[1] && (tag_output_1 == input_tag);
 assign hit_datapath = {hit_1, hit_0};
 
-dcache_array #(.width(1))
+dcache_array #(.s_index(s_index), .width(1))
 lru (
     .clk(clk),
     .rst(rst),
@@ -94,7 +94,7 @@ lru (
     .dataout(lru_output)
 );
 
-dcache_array #(.width(1))
+dcache_array #(.s_index(s_index), .width(1))
 valid_array_0(
     .clk(clk),
     .rst(rst),
@@ -106,7 +106,7 @@ valid_array_0(
     .dataout(valid_out[0])
 );
 
-dcache_array #(.width(1))
+dcache_array #(.s_index(s_index), .width(1))
 valid_array_1(
     .clk(clk),
     .rst(rst),
@@ -118,7 +118,7 @@ valid_array_1(
     .dataout(valid_out[1])
 );
 
-dcache_array #(.width(1))
+dcache_array #(.s_index(s_index), .width(1))
 dirty_array_0(
     .clk(clk),
     .rst(rst),
@@ -131,7 +131,7 @@ dirty_array_0(
 );
 
 
-dcache_array #(.width(1))
+dcache_array #(.s_index(s_index), .width(1))
 dirty_array_1(
     .clk(clk),
     .rst(rst),
@@ -143,53 +143,8 @@ dirty_array_1(
     .dataout(dirty_out[1])
 );
 
-/*dcache_array #(.width(24))
-tag_array_0 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_tag[0]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(input_tag),
-    .dataout(tag_output_0)
-);
 
-dcache_array  #(.width(24))
-tag_array_1 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .load(load_tag[1]),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(input_tag),
-    .dataout(tag_output_1)
-);
-
-dcache_data_array data_array_0 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .write_en(write_enable_0),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(data_array_in),
-    .dataout(output_data_0)
-);
-
-dcache_data_array data_array_1 (
-    .clk(clk),
-    .rst(rst),
-    .read(1'b1),
-    .write_en(write_enable_1),
-    .rindex(input_index),
-    .windex(input_index),
-    .datain(data_array_in),
-    .dataout(output_data_1)
-);
-*/
-tag_array_22_nox tag_array_0(
+tag_array_22_5 tag_array_0(
     .address(input_index),
 	.clock(clk),
 	.data(input_tag),
@@ -198,7 +153,7 @@ tag_array_22_nox tag_array_0(
 	.q(tag_output_0)
 );
 
-tag_array_22_nox tag_array_1(
+tag_array_22_5 tag_array_1(
     .address(input_index),
 	.clock(clk),
 	.data(input_tag),
@@ -207,7 +162,26 @@ tag_array_22_nox tag_array_1(
 	.q(tag_output_1)
 );
 
-data_array_64 data_array_0 (
+data_array_32 data_array_0 (
+    .address(input_index),
+	.byteena(write_enable_0),
+    .clock(clk),
+	.data(pmem_rdata),
+    .rden(1'b1),
+	.wren(1'b1),
+	.q(output_data_0)
+);
+
+data_array_32 data_array_1 (
+    .address(input_index),
+	.byteena(write_enable_1),
+    .clock(clk),
+	.data(pmem_rdata),
+    .rden(1'b1),
+	.wren(1'b1),
+	.q(output_data_1)
+);
+/*data_array_64 data_array_0 (
     .address(input_index),
 	.byteena(write_enable_0),
     .clock(clk),
@@ -223,7 +197,8 @@ data_array_64 data_array_1 (
 	.data(pmem_rdata),
 	.wren(1'b1),
 	.q(output_data_1)
-);
+);*/
+
 
 always_comb begin
 
@@ -242,7 +217,6 @@ always_comb begin
                 //second data
                 1'b1: begin
                     pmem_wdata = output_data_1;
-                    
                 end
             endcase
             mem_rdata256 = pmem_rdata;
@@ -259,7 +233,10 @@ always_comb begin
         end
         default: ;
     endcase
-    
+end
+
+
+always_comb begin
     //input to data array
     unique case (mem_enable_sel)
 		1'b1 : data_array_in = pmem_rdata;
@@ -278,10 +255,5 @@ always_comb begin
 		2'b01:	pmem_address = mem_address;
 		default: pmem_address = 32'h0;
 	endcase
-
-    
-    
-        
-    
 end
 endmodule : dcache_datapath

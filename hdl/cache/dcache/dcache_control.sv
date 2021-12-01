@@ -45,7 +45,6 @@ enum int unsigned {
     /* List of states */
 	
     hit,
-    return_data,
     write_back,
     write_cache
 } state, next_states;
@@ -78,7 +77,7 @@ begin : state_actions
 
         hit: begin
             //miss
-            if (mem_read | mem_write) begin
+            if (mem_write) begin
                 if (hit_datapath == 0) begin
                     //set lru to be the other one
                     set_lru = ~lru_output;
@@ -103,7 +102,7 @@ begin : state_actions
                         load_lru = 1'b1;
                     end
                     else if (mem_write) begin
-                        //mem_resp = 1'b1;
+                        mem_resp = 1'b1;
                         //set the first dirty
                         set_dirty = 2'b01;
                         load_dirty = 2'b01;
@@ -126,7 +125,7 @@ begin : state_actions
                         load_lru = 1'b1;
                     end
                     else if (mem_write) begin
-                        //mem_resp = 1'b1;
+                        mem_resp = 1'b1;
                         //set the second dirty
                         set_dirty = 2'b10;
                         load_dirty = 2'b10;
@@ -140,9 +139,7 @@ begin : state_actions
                 end
             end
         end
-        return_data: begin
-            mem_resp = 1'b1;
-        end
+
         write_back: begin
             pmem_write = 1'b1;
             //if (lru_output)
@@ -157,17 +154,14 @@ begin : state_actions
             else begin
                 write_enable_0 = 32'hffffffff;
             end
-            set_valid[lru_output] = 1'b1;
-            load_valid[lru_output] = 1'b1;
+            
             
             pmem_write = 1'b0;
             if (pmem_resp) begin
-                //pmem_write = 1'b0;
-                //mem_resp = 1'b1;
+                set_valid[lru_output] = 1'b1;
+                load_valid[lru_output] = 1'b1;
                 mem_enable_sel = 1'b1;
                 load_tag[lru_output] = 1'b1;
-                //set lru to the opposite way at the end of the write
-                //set_lru = ~lru_output
                 load_lru = 1'b1;
             end
         end
@@ -194,13 +188,9 @@ begin : next_state_logic
                     else next_states = write_cache;
                 end
                 else begin
-                    next_states = return_data;
+                    next_states = hit;
                 end
             end
-        end
-        
-        return_data: begin
-            next_states = hit;
         end
 
         write_back: begin
@@ -209,7 +199,7 @@ begin : next_state_logic
         end
 
         write_cache: begin
-            if (pmem_resp) next_states = return_data;
+            if (pmem_resp) next_states = hit;
             else next_states = write_cache;
         end
 		
