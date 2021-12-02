@@ -35,6 +35,8 @@ module icache_control (
     
 );
 
+int cache_requests, next_cache_requests, cache_misses, next_cache_misses;
+
 enum int unsigned {
     /* List of states */
 	//idle,
@@ -82,6 +84,7 @@ begin : state_actions
                 //first data
                 set_lru = 1;
                 if (mem_read) begin
+                    next_cache_requests = cache_requests + 1;
                     //mem_enable_sel = 1'b0;
                     write_enable_0 = 1'b0;
                     mem_resp = 1'b1;
@@ -96,6 +99,7 @@ begin : state_actions
                 set_lru = 0;
                 
                 if (mem_read) begin
+                    next_cache_requests = cache_requests + 1;
                     //mem_enable_sel = 1'b0;
                     write_enable_1 = 1'b0;
                     mem_resp = 1'b1;
@@ -125,6 +129,7 @@ begin : state_actions
             //load_tag[lru_output] = 1'b1;
             //pmem_write = 1'b0;
             if (pmem_resp) begin
+                next_cache_misses = cache_misses + 1;
                 set_valid[lru_output] = 1'b1;
                 load_valid[lru_output] = 1'b1;
                 load_tag[lru_output] = 1'b1;
@@ -183,6 +188,9 @@ always_ff @(posedge clk)
 begin: next_state_assignment
     /* Assignment of next state on clock edge */
     state <= next_states;
+    
+    cache_requests <= next_cache_requests;
+    cache_misses <= next_cache_misses;
 end
 
 endmodule : icache_control

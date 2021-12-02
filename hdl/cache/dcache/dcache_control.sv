@@ -43,7 +43,9 @@ module dcache_control (
     
 );
 
-logic writing, next_writing;
+
+int cache_requests, next_cache_requests, cache_misses, next_cache_misses, write_backs, next_write_backs;
+
 
 enum int unsigned {
     /* List of states */
@@ -68,7 +70,6 @@ function void set_defaults();
     mem_enable_sel = 0;
     write_enable_0 = {32{1'b1}};
     write_enable_1 = {32{1'b1}};
-    next_writing = 0;
     wren = 0;
 endfunction
 
@@ -92,13 +93,14 @@ begin : state_actions
                 set_lru = 1;
                 
                 if (mem_read) begin
+                    next_cache_requests = cache_requests + 1;
                     mem_enable_sel = 1'b0;
                     write_enable_0 = 32'd0;
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
                 else if (mem_write) begin
-                
+                    next_cache_requests = cache_requests + 1;
                     //set the first dirty
                     set_dirty = 2'b01;
                     load_dirty = 2'b01;
@@ -107,10 +109,8 @@ begin : state_actions
                     wren[0] = 1'b1;
                     //set lru at the end of the write
                     load_lru = 1'b1;
-                    next_writing = 1'b1;
                 
                     mem_resp = 1'b1;
-                    next_writing = 1'b0;
                     
                 end
             end
@@ -121,12 +121,14 @@ begin : state_actions
                 set_lru = 0;
                 
                 if (mem_read) begin
+                    next_cache_requests = cache_requests + 1;
                     mem_enable_sel = 1'b0;
                     write_enable_1 = 32'd0;
                     mem_resp = 1'b1;
                     load_lru = 1'b1;
                 end
                 else if (mem_write) begin
+                    next_cache_requests = cache_requests + 1;
                     //set the first dirty
                     set_dirty = 2'b10;
                     load_dirty = 2'b10;
@@ -135,9 +137,7 @@ begin : state_actions
                     wren[1] = 1'b1;
                     //set lru at the end of the write
                     load_lru = 1'b1;
-                    next_writing = 1'b1;
                     mem_resp = 1'b1;
-                    next_writing = 1'b0;
                 end
             end
         end
@@ -146,6 +146,7 @@ begin : state_actions
             pmem_write = 1'b1;
             //if (lru_output)
             if (pmem_resp) begin
+                next_write_backs = write_backs + 1;
                 //set lru to be the other one
                 set_lru = ~lru_output;
                 if (dirty_out[lru_output]) begin
@@ -169,6 +170,7 @@ begin : state_actions
             
             pmem_write = 1'b0;
             if (pmem_resp) begin
+                next_cache_misses = cache_misses + 1;
                 set_valid[lru_output] = 1'b1;
                 load_valid[lru_output] = 1'b1;
                 mem_enable_sel = 1'b1;
@@ -224,7 +226,10 @@ always_ff @(posedge clk)
 begin: next_state_assignment
     /* Assignment of next state on clock edge */
     state <= next_states;
-    writing <= next_writing;
+    cache_requests <= next_cache_requests;
+    cache_misses <= next_cache_misses;
+    write_backs <= next_write_backs;
+
 end
 
 endmodule : dcache_control
