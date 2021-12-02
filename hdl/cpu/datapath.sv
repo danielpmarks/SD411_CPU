@@ -111,7 +111,7 @@ pc_register pc(.*,
     .out(pc_out)
 );
 
-local_branch_table #(.num_bits(5)) local_branch_predictor(
+local_branch_table #(.num_bits(6)) local_branch_predictor(
     .*,
     .update(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr),
     .correct(correct_prediction),
@@ -268,12 +268,20 @@ alu ALU(.a(alumux1_out), .b(alumux2_out), .f(alu_out), .aluop(aluop));
 cmp CMP(.a(forward_mux1_out), .b(cmpmux_out), .cmpop(cmpop), .br_en(br_en));
 
 int branch_hits;
+int branch_predictions;
 
 always_ff @(posedge clk) begin
-    if(rst)
+    if(rst) begin
         branch_hits <= 0;
-    else if(monitors[1].commit && ((control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr) && !flush)) 
-        branch_hits <= branch_hits + 1;
+        branch_predictions <=0;
+    end
+    else if(monitors[1].commit && (control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr)) 
+        if(!flush) begin
+            branch_hits <= branch_hits + 1;
+            branch_predictions <= branch_predictions + 1;
+        end else begin
+            branch_predictions <= branch_predictions + 1;
+        end
     else
         branch_hits <= branch_hits;
 
