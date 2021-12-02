@@ -1,0 +1,98 @@
+/* MODIFY. The cache controller. It is a state machine
+that controls the behavior of the cache. */
+
+module cache_control (
+    input clk,
+    input rst,
+    input hit,
+    input dirty,
+
+    input mem_read,
+    input mem_write,
+
+    input logic pmem_resp,
+
+    output logic set_read,
+    output logic set_write,
+    
+    output logic pmem_addr_mux_sel,
+    output logic pmem_read,
+    output logic pmem_write,
+    
+    output logic mem_resp
+
+);
+
+enum int unsigned {
+    CHECK_CACHE,
+    HIT_READ,
+    HIT_WRITE,
+    
+    LOAD_FROM_PMEM,
+    STORE_TO_PMEM
+} state, next_state;
+
+always_ff @(posedge clk) begin
+    if(rst)
+        state <= CHECK_CACHE;
+    else 
+        state <= next_state;
+end
+
+always_comb begin: state_control_logic
+    unique case(state)
+        HIT_READ: begin
+            set_read = 1;
+            mem_resp = 1;
+        end
+        HIT_WRITE: begin
+            set_write = 1;
+            mem_resp = 1;
+            pmem_data_mux_sel = 0;
+        end
+        STORE_TO_PMEM: begin
+            pmem_addr_mux_sel = 1;
+            pmem_write = 1;
+            set_read = 1;
+        end
+        LOAD_FROM_PMEM: begin
+            pmem_addr_mux_sel = 0;
+            set_write = 1;
+            pmem_read = 1;
+            cache_data_mux_sel = 1;
+            mem_resp = 1;
+        end
+    endcase
+
+end
+
+always_comb begin : next_state_logic
+    next_state = CHECK_CACHE;
+    unique case(state)
+        CHECK_CACHE: begin 
+            if(mem_read) begin
+                next_state = hit ? HIT_READ : dirty ? STORE_TO_PMEM : LOAD_FROM_PMEM;
+            end 
+            else if (mem_write) begin
+                next_state = hit ? HIT_WRITE : dirty ? STORE_TO_PMEM : LOAD_FROM_PMEM;
+            end
+        end
+        HIT_READ, HIT_WRITE: begin
+            next_state = CHECK_CACHE;
+        end
+        STORE_TO_PMEM: begin
+            if(pmem_resp == 1)
+                next_state = LOAD_FROM_PMEM;
+            else 
+                next_state = STORE_TO_PMEM;
+        end
+        LOAD_FROM_PMEM: begin
+            if(pmem_resp == 1)
+                next_state = CHECK_CACHE;
+            else 
+                next_state = LOAD_FROM_PMEM;
+        end
+    endcase
+end
+
+endmodule : cache_control

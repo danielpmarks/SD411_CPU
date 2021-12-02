@@ -121,6 +121,14 @@ always_comb begin
     end
 end*/
 
+logic [255:0] pmem_cacheline;
+logic hold_cacheline;
+
+always_ff@(posedge clk) begin
+    pmem_cacheline <= pmem_rdata;
+    hold_cacheline <= pmem_read && pmem_resp && mem_read;
+end
+
 dcache_datapath dcache_datapath(.*,
     .mem_address(req_addr),
     .index_in(mem_address[9:5]),
@@ -140,7 +148,7 @@ dcache_control dcache_control (.*,
 dcache_bus_adapter dcache_bus_adapter
 (
 .mem_wdata256,
-.mem_rdata256,
+.mem_rdata256(hold_cacheline ? pmem_cacheline : mem_rdata256),
 .mem_wdata,
 .mem_rdata,
 .mem_byte_enable(mem_byte_enable_delayed),

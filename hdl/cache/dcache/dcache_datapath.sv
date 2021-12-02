@@ -109,7 +109,7 @@ valid_array_0(
     .read(1'b1),
     .load(load_valid[0]),
     .rindex(input_index),
-    .windex(input_index),
+    .windex(mem_address[9:5]),
     .datain(1'b1),
     .dataout(valid_out[0])
 );
@@ -121,7 +121,7 @@ valid_array_1(
     .read(1'b1),
     .load(load_valid[1]),
     .rindex(input_index),
-    .windex(input_index),
+    .windex(mem_address[9:5]),
     .datain(1'b1),
     .dataout(valid_out[1])
 );
@@ -133,7 +133,7 @@ dirty_array_0(
     .read(1'b1),
     .load(load_dirty[0]),
     .rindex(input_index),
-    .windex(input_index),
+    .windex(mem_address[9:5]),
     .datain(set_dirty[0]),
     .dataout(dirty_out[0])
 );
@@ -146,7 +146,7 @@ dirty_array_1(
     .read(1'b1),
     .load(load_dirty[1]),
     .rindex(input_index),
-    .windex(input_index),
+    .windex(mem_address[9:5]),
     .datain(set_dirty[1]),
     .dataout(dirty_out[1])
 );
@@ -170,9 +170,10 @@ tag_array_22_5 tag_array_1(
 	.q(tag_output_1)
 );
 
-data_array_32 data_array_0 (
-    .address(input_index),
-	.byteena(write_enable_0),
+dcache_data_array_32 data_array_0 (
+    .rdaddress(input_index),
+    .wraddress(mem_address[9:5]),
+	.byteena_a(write_enable_0),
     .clock(clk),
 	.data(data_in),
     .rden(1'b1),
@@ -180,9 +181,10 @@ data_array_32 data_array_0 (
 	.q(output_data_0)
 );
 
-data_array_32 data_array_1 (
-    .address(input_index),
-	.byteena(write_enable_1),
+dcache_data_array_32 data_array_1 (
+    .rdaddress(input_index),
+    .wraddress(mem_address[9:5]),
+	.byteena_a(write_enable_1),
     .clock(clk),
 	.data(data_in),
     .rden(1'b1),

@@ -98,23 +98,19 @@ begin : state_actions
                     load_lru = 1'b1;
                 end
                 else if (mem_write) begin
-                    //First cycle to read and compare the tage data
-                    if(!writing) begin
-                        //set the first dirty
-                        set_dirty = 2'b01;
-                        load_dirty = 2'b01;
-                        mem_enable_sel = 1'b0;
-                        write_enable_0 = mem_byte_enable256;
-                        wren[0] = 1'b1;
-                        //set lru at the end of the write
-                        load_lru = 1'b1;
-                        next_writing = 1'b1;
-                    end 
-                    //Second cycle to write to cache
-                    else begin
-                        mem_resp = 1'b1;
-                        next_writing = 1'b0;
-                    end
+                
+                    //set the first dirty
+                    set_dirty = 2'b01;
+                    load_dirty = 2'b01;
+                    mem_enable_sel = 1'b0;
+                    write_enable_0 = mem_byte_enable256;
+                    wren[0] = 1'b1;
+                    //set lru at the end of the write
+                    load_lru = 1'b1;
+                    next_writing = 1'b1;
+                
+                    mem_resp = 1'b1;
+                    next_writing = 1'b0;
                     
                 end
             end
@@ -131,24 +127,17 @@ begin : state_actions
                     load_lru = 1'b1;
                 end
                 else if (mem_write) begin
-
-                    //First cycle to read and compare the tage data
-                    if(!writing) begin
-                        //set the first dirty
-                        set_dirty = 2'b10;
-                        load_dirty = 2'b10;
-                        mem_enable_sel = 1'b0;
-                        write_enable_1 = mem_byte_enable256;
-                        wren[1] = 1'b1;
-                        //set lru at the end of the write
-                        load_lru = 1'b1;
-                        next_writing = 1'b1;
-                    end 
-                    //Second cycle to write to cache
-                    else begin
-                        mem_resp = 1'b1;
-                        next_writing = 1'b0;
-                    end
+                    //set the first dirty
+                    set_dirty = 2'b10;
+                    load_dirty = 2'b10;
+                    mem_enable_sel = 1'b0;
+                    write_enable_1 = mem_byte_enable256;
+                    wren[1] = 1'b1;
+                    //set lru at the end of the write
+                    load_lru = 1'b1;
+                    next_writing = 1'b1;
+                    mem_resp = 1'b1;
+                    next_writing = 1'b0;
                 end
             end
         end
