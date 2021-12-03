@@ -61,6 +61,9 @@ function void set_defaults();
     //mem_enable_sel = 0;
     write_enable_0 = 0;
     write_enable_1 = 0;
+	 
+	 next_cache_requests = cache_requests;
+	 next_cache_misses = cache_misses;
 endfunction
 
 always_comb

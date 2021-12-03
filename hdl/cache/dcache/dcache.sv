@@ -36,33 +36,35 @@ module dcache #(
 	
 );
 
-logic [1:0] hit_datapath;
+logic [3:0] hit_datapath;
 
 
 //lru input
-logic set_lru;
+logic [2:0] set_lru;
 logic load_lru;
 
 //dirty input
-logic[1:0] load_dirty;
-logic[1:0] set_dirty;
+logic[3:0] load_dirty;
+logic set_dirty;
     
 //valid input
-logic[1:0] load_valid;
-logic[1:0] set_valid;
+logic[3:0] load_valid;
+logic set_valid;
     
 //tag control
-logic[1:0] load_tag;
+logic[3:0] load_tag;
 
 //data control
 logic data_array_select;
 
 //output to control
-logic lru_output;
-logic[1:0] valid_out;
-logic[1:0] dirty_out;
+logic [2:0] lru_output;
+logic[3:0] valid_out;
+logic[3:0] dirty_out;
 logic [31:0] write_enable_0;
 logic [31:0] write_enable_1;
+logic [31:0] write_enable_2;
+logic [31:0] write_enable_3;
 //bus adapter
 logic [255:0] mem_wdata256;
 logic [255:0] mem_rdata256;
@@ -81,7 +83,7 @@ logic [3:0] mem_byte_enable_delayed;
 logic mem_read_or_write_delay;
 logic mem_read_or_write;
 logic [255:0] mem_wdata_delayed;
-logic [1:0] wren;
+logic [3:0] wren;
 
 assign mem_read_or_write_delay = (mem_write_delayed == 1 || mem_read_delayed == 1);
 assign mem_read_or_write = (mem_write == 1 || mem_read == 1);
