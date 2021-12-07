@@ -63,7 +63,7 @@ alumux::alumux1_sel_t alumux1_sel;
 alumux::alumux2_sel_t alumux2_sel;
 cmpmux::cmpmux_sel_t cmpmux_sel;
 alu_ops aluop;
-branch_funct3_t cmpop;
+logic [2:0] cmpop;
 logic [31:0] pc_ex, rs1_ex, rs2_ex;
 logic [31:0] forward_mux1_out;
 logic [31:0] forward_mux2_out;
@@ -497,6 +497,9 @@ forwarding_unit forwarding_unit(
 
     .pc_mem(control_words[2].pc),
     .pc_wb(control_words[3].pc),
+
+    .br_en_mem({32'd0, br_en_mem}),
+    .br_en_wb({31'd0, br_en_wb}),
 
     .flush_ex_mem(flush_ex_mem),
     .flush_mem_wb(flush_mem_wb),

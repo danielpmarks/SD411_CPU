@@ -163,11 +163,11 @@ begin : word_generator
                     end
                     slt: begin
                         regfilemux_sel = regfilemux::br_en;
-                        cmpmux_sel = cmpmux::i_imm;
+                        cmpmux_sel = cmpmux::rs2_out;
                     end
                     sltu: begin
                         regfilemux_sel = regfilemux::br_en;
-                        cmpmux_sel = cmpmux::i_imm;
+                        cmpmux_sel = cmpmux::rs2_out;
                     end
                     sr: begin
                         unique case(funct7[5])
