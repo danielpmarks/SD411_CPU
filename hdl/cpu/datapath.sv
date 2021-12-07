@@ -487,11 +487,16 @@ forwarding_unit forwarding_unit(
     .rs2(rs2_addr_ex), // reg addr from ID/EX stage
     .rs1_out(rs1_ex),
     .rs2_out(rs2_ex),
+    .u_imm_mem(immediates[2].u_imm),
+    .u_imm_wb(u_imm_wb),
     .EX_MEM_alu_out(alu_out_mem),
     .MEM_WB_alu_out(alu_out_wb),
     .MEM_WB_mem_out(data_rdata),
     .forward_mux1_out(forward_mux1_out),
     .forward_mux2_out(forward_mux2_out),
+
+    .pc_mem(control_words[2].pc),
+    .pc_wb(control_words[3].pc),
 
     .flush_ex_mem(flush_ex_mem),
     .flush_mem_wb(flush_mem_wb),
