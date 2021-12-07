@@ -287,7 +287,7 @@ begin : next_state_logic
         hit: begin
             if(mem_read | mem_write) begin
                 if (hit_datapath == 0) begin
-                    if(dirty_out[lru_output[0] ? lru_output[2] : lru_output[1]]) next_states = write_back;
+                    if(dirty_out[lru_output[0] ? lru_output[2] + 2 : lru_output[1]]) next_states = write_back;
                     else next_states = write_cache;
                 end
                 else begin

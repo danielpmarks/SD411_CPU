@@ -11,12 +11,17 @@ module forwarding_unit
     input logic [4:0] rs2, // reg addr from ID/EX stage
     input logic [31:0] rs1_out,
     input logic [31:0] rs2_out,
+    input logic [31:0] u_imm_mem,
+    input logic [31:0] u_imm_wb,
     input logic [31:0] EX_MEM_alu_out,
     //input logic [31:0] EX_MEM_mem_out,
     input logic [31:0] MEM_WB_alu_out,
     input logic [31:0] MEM_WB_mem_out,
     output logic [31:0] forward_mux1_out,
     output logic [31:0] forward_mux2_out,
+
+    input logic [31:0] pc_mem,
+    input logic [31:0] pc_wb,
 
     input logic flush_ex_mem,
     input logic flush_mem_wb,
@@ -145,6 +150,8 @@ always_comb begin : forwarding_muxes
             // not sure if we need to consider cases other than load and alu instructions
             case (MEM_WB_regfile_sel)
                 regfilemux::alu_out: forward_mux1_out = MEM_WB_alu_out;
+                regfilemux::pc_plus4: forward_mux1_out = pc_wb + 4;
+                regfilemux::u_imm:  forward_mux1_out = u_imm_wb;
                 regfilemux::lhu: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lh: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lbu: forward_mux1_out = MEM_WB_true_mem_out;
@@ -159,6 +166,8 @@ always_comb begin : forwarding_muxes
             end
             case (EX_MEM_regfile_sel)
                 regfilemux::alu_out: forward_mux1_out = EX_MEM_alu_out;
+                regfilemux::pc_plus4: forward_mux1_out = pc_mem + 4;
+                regfilemux::u_imm:  forward_mux1_out = u_imm_mem;
                 //regfilemux::lhu: forward_mux1_out = EX_MEM_true_mem_out;
                 //regfilemux::lh: forward_mux1_out = EX_MEM_true_mem_out;
                 //regfilemux::lbu: forward_mux1_out = EX_MEM_true_mem_out;
@@ -177,6 +186,8 @@ always_comb begin : forwarding_muxes
         2'b10: begin
             case (MEM_WB_regfile_sel)
                 regfilemux::alu_out: forward_mux2_out = MEM_WB_alu_out;
+                regfilemux::u_imm:  forward_mux2_out = u_imm_wb;
+                regfilemux::pc_plus4: forward_mux2_out = pc_wb + 4;
                 regfilemux::lhu: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lh: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lbu: forward_mux2_out = MEM_WB_true_mem_out;
@@ -191,6 +202,8 @@ always_comb begin : forwarding_muxes
             end
             case (EX_MEM_regfile_sel)
                 regfilemux::alu_out: forward_mux2_out = EX_MEM_alu_out;
+                regfilemux::pc_plus4: forward_mux2_out = pc_mem + 4;
+                regfilemux::u_imm:  forward_mux2_out = u_imm_mem;
                 //regfilemux::lhu: forward_mux2_out = EX_MEM_true_mem_out;
                 //regfilemux::lh: forward_mux2_out = EX_MEM_true_mem_out;
                 //regfilemux::lbu: forward_mux2_out = EX_MEM_true_mem_out;
