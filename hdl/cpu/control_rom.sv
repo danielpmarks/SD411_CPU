@@ -184,6 +184,8 @@ begin : word_generator
             end
             op_auipc: begin
                 alumux1_sel = alumux::pc_out;
+                alumux2_sel = alumux::u_imm;
+                aluop = alu_add;
                 load_regfile = 1'b1;
             end
             op_jal: begin
