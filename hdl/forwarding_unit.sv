@@ -23,6 +23,9 @@ module forwarding_unit
     input logic [31:0] pc_mem,
     input logic [31:0] pc_wb,
 
+    input logic br_en_mem,
+    input logic br_en_wb,
+
     input logic flush_ex_mem,
     input logic flush_mem_wb,
 
@@ -157,6 +160,7 @@ always_comb begin : forwarding_muxes
                 regfilemux::lbu: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lb: forward_mux1_out = MEM_WB_true_mem_out;
                 regfilemux::lw: forward_mux1_out = MEM_WB_true_mem_out;
+                regfilemux::br_en: forward_mux1_out = br_en_wb;
 					 default:;
             endcase
         end
@@ -168,6 +172,7 @@ always_comb begin : forwarding_muxes
                 regfilemux::alu_out: forward_mux1_out = EX_MEM_alu_out;
                 regfilemux::pc_plus4: forward_mux1_out = pc_mem + 4;
                 regfilemux::u_imm:  forward_mux1_out = u_imm_mem;
+                regfilemux::br_en: forward_mux1_out = br_en_mem;
                 //regfilemux::lhu: forward_mux1_out = EX_MEM_true_mem_out;
                 //regfilemux::lh: forward_mux1_out = EX_MEM_true_mem_out;
                 //regfilemux::lbu: forward_mux1_out = EX_MEM_true_mem_out;
@@ -193,6 +198,7 @@ always_comb begin : forwarding_muxes
                 regfilemux::lbu: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lb: forward_mux2_out = MEM_WB_true_mem_out;
                 regfilemux::lw: forward_mux2_out = MEM_WB_true_mem_out;
+                regfilemux::br_en: forward_mux2_out = br_en_wb;
 					 default:;
             endcase
         end
@@ -204,6 +210,7 @@ always_comb begin : forwarding_muxes
                 regfilemux::alu_out: forward_mux2_out = EX_MEM_alu_out;
                 regfilemux::pc_plus4: forward_mux2_out = pc_mem + 4;
                 regfilemux::u_imm:  forward_mux2_out = u_imm_mem;
+                regfilemux::br_en: forward_mux2_out = br_en_mem;
                 //regfilemux::lhu: forward_mux2_out = EX_MEM_true_mem_out;
                 //regfilemux::lh: forward_mux2_out = EX_MEM_true_mem_out;
                 //regfilemux::lbu: forward_mux2_out = EX_MEM_true_mem_out;

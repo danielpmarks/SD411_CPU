@@ -25,7 +25,7 @@ module ID_EX(
     output alumux::alumux2_sel_t alumux2_sel,
     output cmpmux::cmpmux_sel_t cmpmux_sel,
     output alu_ops aluop,
-    output branch_funct3_t cmpop,
+    output [2:0] cmpop,
 
     output [31:0] pc_out,
 
@@ -51,7 +51,7 @@ assign alumux1_sel = control_word.alumux1_sel;
 assign alumux2_sel = control_word.alumux2_sel;
 assign cmpmux_sel = control_word.cmpmux_sel;
 assign aluop = control_word.aluop;
-assign cmpop = branch_funct3_t'(control_word.funct3);
+assign cmpop = control_word.funct3;
 assign pc_out = control_word.pc;
 
 always_ff@(posedge clk) begin
