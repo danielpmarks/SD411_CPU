@@ -111,7 +111,7 @@ pc_register pc(.*,
     .out(pc_out)
 );
 
-local_branch_table #(.num_bits(6)) local_branch_predictor(
+local_branch_table #(.num_bits(7)) local_branch_predictor(
     .*,
     .update(control_words[1].opcode == op_br || control_words[1].opcode == op_jal || control_words[1].opcode == op_jalr),
     .correct(correct_prediction),
